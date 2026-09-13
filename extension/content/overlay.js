@@ -62,9 +62,13 @@ button:hover { opacity: 1; background: rgba(255,255,255,.16); }
       if (this.host && this.host.isConnected) return;
       this.host = document.createElement("div");
       this.host.setAttribute("data-live-caption", "");
-      // Zero-sized and out of flow: the panel itself is position:fixed inside
-      // the shadow root, so the host must not affect the page's layout.
-      this.host.style.cssText = "all:initial;position:fixed;top:0;left:0;width:0;height:0";
+      // Zero-sized and out of flow so the page's layout is untouched. The
+      // z-index belongs here, not just on the panel inside: position:fixed
+      // makes the host its own stacking context, so without it the panel's
+      // own z-index only competes with its siblings inside the shadow root
+      // and any page overlay paints straight over the captions.
+      this.host.style.cssText =
+        "all:initial;position:fixed;top:0;left:0;width:0;height:0;z-index:2147483647";
       const root = this.host.attachShadow({ mode: "closed" });
       const style = document.createElement("style");
       style.textContent = CSS;
