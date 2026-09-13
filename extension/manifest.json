@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Live Caption",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Automatic on-screen English captions for any audio or video playing in a tab. Speech recognition runs locally in the browser.",
   "author": "EricZhou866",
+  "homepage_url": "https://github.com/EricZhou866/LiveCaption",
 
   "browser_specific_settings": {
     "gecko": {

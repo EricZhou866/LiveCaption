@@ -50,13 +50,19 @@ npm start               # launches Firefox with the add-on loaded
 To load it by hand: open `about:debugging#/runtime/this-firefox` → **Load Temporary
 Add-on** → pick `extension/manifest.json`.
 
-For a permanent install, build an unsigned package and submit it to
+For a permanent install, build a package and submit it to
 [addons.mozilla.org](https://addons.mozilla.org/developers/) (Firefox only installs
 signed add-ons permanently):
 
 ```bash
 npm run build           # -> web-ext-artifacts/live-caption-<version>.xpi
+npm run source          # -> web-ext-artifacts/source-<version>.zip, required by AMO
 ```
+
+[docs/amo-submission.md](docs/amo-submission.md) has the full submission checklist:
+listing copy, permission justifications, reviewer notes, and the build instructions AMO
+requires because a minified dependency is vendored. Self-distribution instead:
+`npm run sign` with your AMO API credentials.
 
 ## Using it
 
@@ -151,6 +157,11 @@ since content scripts only inject on page load.
 The add-on stores only your settings. Audio is processed in memory and discarded; the
 only network traffic in local mode is the one-time model download from huggingface.co.
 Remote mode uploads 16 kHz WAV segments to the endpoint you configure, and nowhere else.
+
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md). Short version: nothing is collected; the only network
+traffic in local mode is the one-time model download.
 
 ## License
 

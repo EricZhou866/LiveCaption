@@ -1,6 +1,6 @@
 {
   "name": "live-caption-firefox",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Firefox add-on that shows live English captions for any audio playing in a tab, using a local Whisper model.",
   "type": "module",
@@ -9,7 +9,9 @@
     "build": "npm run vendor && node scripts/package-xpi.mjs",
     "start": "npm run vendor && web-ext run --source-dir extension --browser-console",
     "lint": "web-ext lint --source-dir extension",
-    "testpage": "node scripts/testpage.mjs"
+    "testpage": "node scripts/testpage.mjs",
+    "source": "git archive --format=zip -o web-ext-artifacts/source-$npm_package_version.zip HEAD",
+    "sign": "npm run vendor && web-ext sign --source-dir extension --channel unlisted"
   },
   "devDependencies": {
     "@huggingface/transformers": "^3.8.1",
