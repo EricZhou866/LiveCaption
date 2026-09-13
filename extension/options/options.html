@@ -120,7 +120,16 @@
         <option value="light">Light</option>
       </select>
     </label>
-    <div class="buttons"><button id="resetPos">Reset caption position</button></div>
+    <label class="field">
+      <span>Keep panel on screen for <output id="autoHideOut"></output></span>
+      <input type="range" id="autoHide" min="0" max="30" step="1" />
+    </label>
+    <p class="hint">Counted from the last caption, once the audio has stopped. Drag the
+      bottom-right corner of the panel to resize it; the size is remembered.</p>
+    <div class="buttons">
+      <button id="resetPos">Reset position</button>
+      <button id="resetSize">Reset size</button>
+    </div>
   </section>
 
   <section class="card">

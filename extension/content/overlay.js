@@ -10,6 +10,17 @@
   left: var(--lc-left, 50%); top: var(--lc-top, auto); bottom: var(--lc-bottom, 8%);
   transform: var(--lc-transform, translateX(-50%));
   width: var(--lc-width, min(720px, 80vw));
+  height: var(--lc-height, auto);
+  min-width: 200px;
+  min-height: 64px;
+  max-width: 96vw;
+  max-height: 80vh;
+  /* Native resizer: needs a non-visible overflow, and gives a real grabber
+     in the bottom-right corner without a custom hit area. */
+  resize: both;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
   padding: 10px 14px 12px;
   border-radius: 14px;
@@ -39,7 +50,10 @@ button {
 button:hover { opacity: 1; background: rgba(255,255,255,.16); }
 .box.light button:hover { background: rgba(0,0,0,.1); }
 
-.lines { max-height: calc(var(--lc-lines, 3) * 1.42em); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+.lines { flex: 1 1 auto; max-height: calc(var(--lc-lines, 3) * 1.42em); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+/* Once the user has dragged the resizer, their height wins over the line count. */
+.box.sized .lines { max-height: none; }
+.box::-webkit-resizer { display: none; }
 .line { overflow-wrap: anywhere; }
 .line.old { opacity: .55; }
 .line.interim { opacity: .92; }
@@ -101,6 +115,7 @@ button:hover { opacity: 1; background: rgba(255,255,255,.16); }
         if (act === "smaller") this.bumpFont(-2);
       });
       this.initDrag();
+      this.initResize();
       this.initFullscreen();
       this.applyOptions(this.opts);
     }
@@ -132,6 +147,26 @@ button:hover { opacity: 1; background: rgba(255,255,255,.16); }
       });
     }
 
+    /** Remember a size the user dragged out, ignoring layout-driven changes. */
+    initResize() {
+      if (typeof ResizeObserver !== "function") return;
+      let timer = null;
+      this.resizeObserver = new ResizeObserver(() => {
+        if (!this.box.style.width && !this.box.style.height) return; // not user-resized
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          const width = Math.round(this.box.offsetWidth);
+          const height = Math.round(this.box.offsetHeight);
+          if (width === this.savedWidth && height === this.savedHeight) return;
+          this.savedWidth = width;
+          this.savedHeight = height;
+          this.box.classList.add("sized");
+          this.onGeometry({ width, height });
+        }, 400);
+      });
+      this.resizeObserver.observe(this.box);
+    }
+
     /* Keep captions visible when a video goes fullscreen. */
     initFullscreen() {
       this.fsHandler = () => {
@@ -157,7 +192,21 @@ button:hover { opacity: 1; background: rgba(255,255,255,.16); }
       if (o.fontSize) this.box.style.setProperty("--lc-font-size", o.fontSize + "px");
       if (o.maxLines) this.box.style.setProperty("--lc-lines", String(o.maxLines));
       if (o.opacity != null) this.box.style.setProperty("--lc-opacity", String(o.opacity));
-      if (o.width) this.box.style.setProperty("--lc-width", o.width);
+      if (o.size && o.size.width) {
+        this.box.style.setProperty("--lc-width", o.size.width + "px");
+        this.box.style.setProperty("--lc-height", o.size.height + "px");
+        this.box.classList.add("sized");
+      } else if (o.size === null) {
+        this.box.style.removeProperty("--lc-width");
+        this.box.style.removeProperty("--lc-height");
+        // The native resizer writes inline width/height, so clearing only the
+        // custom properties would leave the dragged-out size in place.
+        this.box.style.removeProperty("width");
+        this.box.style.removeProperty("height");
+        this.savedWidth = null;
+        this.savedHeight = null;
+        this.box.classList.remove("sized");
+      }
       this.box.classList.toggle("light", o.theme === "light");
       if (o.position && o.position.left != null) this.setPosition(o.position.left, o.position.top);
     }
@@ -171,6 +220,7 @@ button:hover { opacity: 1; background: rgba(255,255,255,.16); }
     show() { this.mount(); this.box.classList.remove("hidden"); }
     hide() { if (this.box) this.box.classList.add("hidden"); }
     destroy() {
+      if (this.resizeObserver) this.resizeObserver.disconnect();
       document.removeEventListener("fullscreenchange", this.fsHandler, true);
       if (this.host) this.host.remove();
       this.host = null;

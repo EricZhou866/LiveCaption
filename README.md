@@ -68,7 +68,10 @@ npm run build           # -> web-ext-artifacts/live-caption-<version>.xpi
    from then on.
 
 - `Ctrl+Shift+L` toggles captions for the current tab.
-- Drag the panel by its header; `A-` / `A+` change text size; `✕` hides it.
+- Drag the panel by its header; drag its bottom-right corner to resize it; `A-` / `A+`
+  change text size; `✕` hides it. Position and size are remembered.
+- The panel disappears 5 s after the last caption once the audio stops. That delay is
+  configurable in Settings, including "never hide".
 - Popup → **Microphone** captions audio from your mic instead of the tab, which is the
   way to caption a call, a desktop app, or a site whose media cannot be tapped.
 
@@ -80,6 +83,7 @@ npm run build           # -> web-ext-artifacts/live-caption-<version>.xpi
 | Precision | `q8` is the default; `q4` is faster, `fp16`/`fp32` are for WebGPU. |
 | Compute | CPU (WebAssembly) everywhere; WebGPU where your Firefox build supports it. |
 | Language | Transcribe as spoken, or translate any language into English (needs a multilingual model). |
+| Panel | Font size, visible lines, opacity, theme, and how long the panel lingers after the last caption (0 = never hide). Position and size are remembered; both have reset buttons. |
 | Timing | Pause length that ends a caption line, partial-update interval, and speech sensitivity. |
 | Engine | Local, or an OpenAI-compatible `POST /v1/audio/transcriptions` endpoint (e.g. a local `whisper.cpp` server). |
 

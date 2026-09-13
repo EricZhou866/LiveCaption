@@ -189,6 +189,8 @@ async function onFrameMessage(port, msg) {
       const ui = {};
       if (msg.fontSize) ui.fontSize = msg.fontSize;
       if (msg.left != null) ui.position = { left: msg.left, top: msg.top };
+      if (msg.width != null) ui.size = { width: msg.width, height: msg.height };
+      dlog("save-ui", JSON.stringify(ui));
       await LCSettings.set({ ui });
       break;
     }

@@ -11,7 +11,7 @@
   const CHUNK_SAMPLES = LC.SAMPLE_RATE / 2; // ship ~500 ms per message
   const ACTIVITY_LEVEL = 0.0025;            // "something is audible"
   const IDLE_STOP_MS = 4000;
-  const AUTO_HIDE_MS = 6000;
+  const DEFAULT_AUTO_HIDE_MS = 5000;
 
   const state = {
     port: null,
@@ -218,8 +218,10 @@
   /* Close the session when the page goes quiet, and hide a stale panel. */
   setInterval(() => {
     if (state.sessionActive && Date.now() - state.lastAudioAt > IDLE_STOP_MS) endSession();
-    if (overlay && state.lastCaption && !state.sessionActive &&
-        Date.now() - state.lastCaption > AUTO_HIDE_MS) {
+    const ui = (state.settings && state.settings.ui) || {};
+    const hideAfter = ui.autoHideMs == null ? DEFAULT_AUTO_HIDE_MS : ui.autoHideMs;
+    if (hideAfter > 0 && overlay && state.lastCaption && !state.sessionActive &&
+        Date.now() - state.lastCaption > hideAfter) {
       overlay.hide();
       overlay.clear();
       state.lastCaption = 0;

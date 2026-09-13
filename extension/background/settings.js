@@ -28,7 +28,9 @@ var LCSettings = (function () {
       maxLines: 3,
       opacity: 0.88,
       theme: "dark",
-      position: null,
+      position: null,      // {left, top} once the panel has been dragged
+      size: null,          // {width, height} once the panel has been resized
+      autoHideMs: 5000,    // how long the panel lingers after the last caption; 0 = never
     },
   };
 

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><title>Overlay harness</title>
+<style>body{font:14px/1.7 ui-monospace,monospace;background:#15151a;color:#e8e8ec;margin:0;padding:28px}
+.pass{color:#6ee7a0}.fail{color:#ff7a7a}h1{font:600 16px system-ui}</style></head>
+<body>
+<h1>Overlay harness — exercises extension/content/overlay.js directly</h1>
+<pre id="out"></pre>
+<script src="/ext/content/shared.js"></script>
+<script src="/ext/content/overlay.js"></script>
+<script>
+const out = document.getElementById("out");
+const results = [];
+const check = (name, ok, detail) => {
+  results.push(ok);
+  out.innerHTML += `<span class="${ok ? "pass" : "fail"}">${ok ? "PASS" : "FAIL"}</span> ${name}${detail ? " — " + detail : ""}\n`;
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+(async () => {
+  const saved = [];
+  const overlay = new LiveCaption.Overlay({ onClose: () => {}, onGeometry: (g) => saved.push(g) });
+  overlay.applyOptions({ fontSize: 20, maxLines: 3, opacity: 0.88, theme: "dark" });
+  overlay.show();
+  overlay.pushFinal("first committed line");
+  overlay.setInterim("a live line that is still being spoken");
+
+  const host = document.querySelector("[data-live-caption]");
+  const box = host.shadowRoot ? host.shadowRoot.querySelector(".box") : null;
+  check("panel mounts", !!box);
+  if (!box) return;
+
+  const cs = getComputedStyle(box);
+  check("host is out of flow with a top z-index", host.style.zIndex === "2147483647" && host.style.position === "fixed",
+        `z-index=${host.style.zIndex}`);
+  check("panel is user-resizable", cs.resize === "both", `resize: ${cs.resize}`);
+  check("default width ~720px", Math.abs(box.getBoundingClientRect().width - Math.min(720, innerWidth * 0.8)) < 2,
+        Math.round(box.getBoundingClientRect().width) + "px");
+  const naturalHeight = box.getBoundingClientRect().height;
+
+  // 1. a user drag of the native resizer = inline width/height on the box
+  box.style.width = "420px";
+  box.style.height = "220px";
+  await sleep(1200); // the observer is debounced at 400 ms
+  const r = box.getBoundingClientRect();
+  check("resize applies", Math.round(r.width) === 420 && Math.round(r.height) === 220,
+        `${Math.round(r.width)}x${Math.round(r.height)}`);
+  check("resize is reported for saving", saved.some((g) => g.width === 420 && g.height === 220),
+        JSON.stringify(saved));
+  check("line-count cap lifts once sized", box.classList.contains("sized") &&
+        getComputedStyle(box.querySelector(".lines")).maxHeight === "none");
+
+  // 2. "reset size" must also undo the resizer's inline width/height
+  overlay.applyOptions({ size: null });
+  await sleep(50);
+  const back = box.getBoundingClientRect();
+  check("reset size returns to the default width and natural height",
+        Math.round(back.width) === Math.round(Math.min(720, innerWidth * 0.8)) &&
+        Math.abs(back.height - naturalHeight) < 4,
+        `${Math.round(back.width)}x${Math.round(back.height)} (natural ${Math.round(naturalHeight)})`);
+
+  // 3. a size stored in settings is applied when the panel is built again
+  const fresh = new LiveCaption.Overlay({});
+  fresh.applyOptions({ fontSize: 20, maxLines: 3, size: { width: 360, height: 150 } });
+  fresh.show();
+  fresh.pushFinal("restored panel");
+  const freshBox = document.querySelectorAll("[data-live-caption]")[1].shadowRoot.querySelector(".box");
+  await sleep(50);
+  const fr = freshBox.getBoundingClientRect();
+  check("stored size is restored", Math.round(fr.width) === 360 && Math.round(fr.height) === 150,
+        `${Math.round(fr.width)}x${Math.round(fr.height)}`);
+
+  out.innerHTML += `\n${results.filter(Boolean).length}/${results.length} checks passed\n`;
+  document.title = results.every(Boolean) ? "ALL PASS" : "FAILURES";
+})();
+</script>
+</body></html>
