@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <span class="logo"></span>
+    <h1>Live Caption</h1>
+    <label class="switch" title="Master switch">
+      <input type="checkbox" id="enabled" />
+      <span class="track"><span class="thumb"></span></span>
+    </label>
+  </header>
+
+  <section id="permission" class="card warn" hidden>
+    <p>Live Caption needs access to the pages you watch in order to read their audio.</p>
+    <button id="grant" class="primary">Allow on all sites</button>
+  </section>
+
+  <section class="card">
+    <div class="row-label">Captions on this tab</div>
+    <div class="segmented" id="mode">
+      <button data-mode="auto">Auto</button>
+      <button data-mode="on">On</button>
+      <button data-mode="off">Off</button>
+    </div>
+    <p class="hint" id="modeHint">Auto shows captions whenever this tab plays audio.</p>
+  </section>
+
+  <section class="card">
+    <div class="row-label">Audio source</div>
+    <div class="segmented" id="source">
+      <button data-source="media">Tab audio</button>
+      <button data-source="mic">Microphone</button>
+    </div>
+  </section>
+
+  <section class="card status">
+    <span class="dot" id="dot"></span>
+    <span id="status">Idle</span>
+  </section>
+
+  <footer>
+    <span id="engineLabel"></span>
+    <button id="options" class="link">Settings</button>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

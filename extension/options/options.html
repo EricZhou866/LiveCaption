@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Live Caption — Settings</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+<main>
+  <h1>Live Caption</h1>
+  <p class="lede">
+    Captions are generated on your computer with a local Whisper model. Audio never leaves
+    the browser unless you deliberately configure a remote endpoint below.
+  </p>
+
+  <section id="permissionCard" class="card warn" hidden>
+    <h2>Site access</h2>
+    <p>Firefox asks you to grant site access explicitly. Without it the add-on cannot read audio from pages.</p>
+    <button id="grant" class="primary">Allow on all sites</button>
+  </section>
+
+  <section class="card">
+    <h2>Behaviour</h2>
+    <label class="check"><input type="checkbox" id="enabled" /> Enable Live Caption</label>
+    <label class="check"><input type="checkbox" id="autoStart" /> Show captions automatically when a tab starts playing audio</label>
+    <label class="check"><input type="checkbox" id="debug" /> Log capture and recognition events to the console (for troubleshooting)</label>
+    <p class="hint">Read the log at <code>about:debugging</code> → This Firefox → Live Caption → Inspect.</p>
+  </section>
+
+  <section class="card">
+    <h2>Speech engine</h2>
+    <label class="field">
+      <span>Engine</span>
+      <select id="engine">
+        <option value="local">Local (in-browser Whisper)</option>
+        <option value="remote">Remote endpoint (OpenAI-compatible)</option>
+      </select>
+    </label>
+
+    <div id="localOpts">
+      <label class="field">
+        <span>Model</span>
+        <select id="model">
+          <option value="onnx-community/whisper-tiny.en">whisper-tiny.en — fastest, best for live captions (~40 MB)</option>
+          <option value="onnx-community/whisper-base.en">whisper-base.en — more accurate, ~2x slower (~80 MB)</option>
+          <option value="onnx-community/whisper-small.en">whisper-small.en — most accurate, needs a fast machine (~250 MB)</option>
+          <option value="onnx-community/whisper-base">whisper-base — multilingual</option>
+          <option value="onnx-community/whisper-small">whisper-small — multilingual</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Precision</span>
+        <select id="dtype">
+          <option value="q8">int8 — smallest download, fastest on CPU</option>
+          <option value="q4">int4 decoder — fastest, slightly less accurate</option>
+          <option value="fp16">fp16 — for WebGPU</option>
+          <option value="fp32">fp32 — highest quality, slow</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Compute</span>
+        <select id="device">
+          <option value="wasm">CPU (WebAssembly) — works everywhere</option>
+          <option value="webgpu">WebGPU — faster, needs a WebGPU-enabled Firefox build</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Language</span>
+        <select id="task">
+          <option value="transcribe">Transcribe spoken language</option>
+          <option value="translate">Translate any language into English</option>
+        </select>
+      </label>
+      <p class="hint">Translation needs a multilingual model (one without the <code>.en</code> suffix).</p>
+      <div class="buttons">
+        <button id="download">Download model now</button>
+        <button id="clearCache">Remove downloaded models</button>
+      </div>
+      <p class="hint" id="modelStatus"></p>
+    </div>
+
+    <div id="remoteOpts" hidden>
+      <label class="field">
+        <span>Endpoint URL</span>
+        <input type="url" id="remoteUrl" placeholder="http://127.0.0.1:8080/inference" />
+      </label>
+      <label class="field">
+        <span>API key (optional)</span>
+        <input type="password" id="remoteKey" placeholder="sk-…" />
+      </label>
+      <label class="field">
+        <span>Model name</span>
+        <input type="text" id="remoteModel" placeholder="whisper-1" />
+      </label>
+      <p class="hint">
+        Audio is uploaded as 16 kHz WAV to this endpoint, in the same multipart format as
+        <code>POST /v1/audio/transcriptions</code>. A local <code>whisper.cpp</code> server works too.
+      </p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Appearance</h2>
+    <label class="field">
+      <span>Font size <output id="fontSizeOut"></output></span>
+      <input type="range" id="fontSize" min="12" max="48" step="1" />
+    </label>
+    <label class="field">
+      <span>Visible lines <output id="maxLinesOut"></output></span>
+      <input type="range" id="maxLines" min="1" max="6" step="1" />
+    </label>
+    <label class="field">
+      <span>Background opacity <output id="opacityOut"></output></span>
+      <input type="range" id="opacity" min="0.3" max="1" step="0.02" />
+    </label>
+    <label class="field">
+      <span>Theme</span>
+      <select id="theme">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+    </label>
+    <div class="buttons"><button id="resetPos">Reset caption position</button></div>
+  </section>
+
+  <section class="card">
+    <h2>Timing</h2>
+    <label class="field">
+      <span>Pause that ends a sentence <output id="silenceOut"></output></span>
+      <input type="range" id="silenceMs" min="300" max="2000" step="50" />
+    </label>
+    <label class="field">
+      <span>Partial update interval <output id="interimOut"></output></span>
+      <input type="range" id="interimMs" min="500" max="3000" step="100" />
+    </label>
+    <label class="field">
+      <span>Speech sensitivity <output id="thresholdOut"></output></span>
+      <input type="range" id="threshold" min="0.002" max="0.05" step="0.002" />
+    </label>
+    <p class="hint">Lower sensitivity values pick up quieter speech but also more background noise.</p>
+  </section>
+
+  <section class="card">
+    <h2>Diagnostics</h2>
+    <p class="hint">Open the tab you want captions on, come back here and run this. It reports
+      whether the content script reached that tab, what media it found, and how the speech
+      engine is doing.</p>
+    <div class="buttons"><button id="diagnose" class="primary">Run diagnostics</button></div>
+    <pre id="diagOut" hidden></pre>
+  </section>
+
+  <p class="saved" id="saved">Saved</p>
+</main>
+<script src="options.js"></script>
+</body>
+</html>

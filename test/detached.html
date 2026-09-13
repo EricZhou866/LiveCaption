@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><title>Detached audio element test</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;background:#121216;color:#e8e8ec;margin:0;
+min-height:100vh;display:grid;place-content:center;gap:14px;padding:40px}button{font:inherit;
+padding:8px 16px;border-radius:8px;border:0;background:#2f6fed;color:#fff;cursor:pointer}</style></head>
+<body>
+  <h1>Detached <code>new Audio()</code></h1>
+  <p>The element is never added to the DOM, so it cannot be found by
+     <code>document.querySelectorAll("audio")</code>.</p>
+  <button id="play">Play</button>
+  <p id="state">idle</p>
+  <script>
+    const state = document.getElementById("state");
+    const el = new Audio("speech.wav");
+    el.loop = true;
+    function start() {
+      return el.play().then(() => {
+        state.textContent = "playing, element in DOM: " + el.isConnected;
+        console.log("TESTPAGE: detached audio playing");
+      });
+    }
+    document.getElementById("play").addEventListener("click", start);
+    start().catch(() => { state.textContent = "autoplay blocked — press Play"; });
+  </script>
+</body></html>

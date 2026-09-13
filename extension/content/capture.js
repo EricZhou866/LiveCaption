@@ -1,0 +1,399 @@
+/* Audio capture: finds whatever is making sound on the page and emits 16 kHz
+ * mono PCM blocks.
+ *
+ * Three sources, because sites play audio in three different ways:
+ *   1. <audio>/<video> elements in the DOM      -> MediaWatcher + AudioTap
+ *   2. media elements never added to the DOM    -> patched HTMLMediaElement.play
+ *      (`new Audio(url).play()`)
+ *   3. the Web Audio API with no media element  -> patched AudioNode.connect
+ * The patches use Firefox's wrappedJSObject/exportFunction, so no script is
+ * injected into the page and a strict page CSP cannot block them. */
+"use strict";
+
+(function (LC) {
+  const PROCESSOR_BUFFER = 4096;
+  const SILENCE = 0.0008;
+
+  LC.AudioTap = class AudioTap {
+    constructor({ onSamples, onStatus } = {}) {
+      this.onSamples = onSamples || (() => {});
+      this.onStatus = onStatus || (() => {});
+      this.ctx = null;
+      this.bus = null;
+      this.processor = null;
+      this.downsampler = null;
+      this.taps = new Map(); // HTMLMediaElement -> tap info
+      this.pageTaps = new Map(); // page AudioContext -> tap info
+      this.micStream = null;
+      this.running = false;
+      this.silentBlocks = 0;
+      this.sawAudio = false;
+      this.hooked = false;
+    }
+
+    /* ---------------- our own graph (DOM elements + microphone) ------------ */
+
+    ensureGraph() {
+      if (this.ctx) return;
+      this.ctx = new AudioContext();
+      this.downsampler = new LC.Downsampler(this.ctx.sampleRate);
+      this.bus = this.ctx.createGain();
+      this.bus.gain.value = 1;
+
+      // ScriptProcessorNode is deprecated but needs no module loading, which
+      // makes it immune to strict page CSPs that would block an AudioWorklet.
+      this.processor = this.ctx.createScriptProcessor(PROCESSOR_BUFFER, 1, 1);
+      this.processor.onaudioprocess = (e) =>
+        this.handleBlock(e.inputBuffer.getChannelData(0), this.downsampler, "element", true);
+
+      const mute = this.ctx.createGain();
+      mute.gain.value = 0;
+      this.bus.connect(this.processor);
+      this.processor.connect(mute);
+      mute.connect(this.ctx.destination);
+    }
+
+    /* A site can route the same sound through more than one tap (a media
+     * element that is also piped through Web Audio). Feeding both into the
+     * recognizer would interleave two copies of the speech, so the first
+     * source that is actually audible owns the stream until it falls quiet. */
+    handleBlock(channel, downsampler, key, trackSilence) {
+      const level = LC.rms(channel);
+      const now = Date.now();
+      if (level > SILENCE) {
+        if (!this.primary || this.primary === key || now - this.primaryAt > 2000) {
+          if (this.primary !== key) LC.log("primary audio source:", key);
+          this.primary = key;
+          this.primaryAt = now;
+        }
+      }
+      if (this.primary && this.primary !== key) return;
+
+      if (trackSilence) {
+        if (level > SILENCE) {
+          this.sawAudio = true;
+          this.silentBlocks = 0;
+        } else if (this.running) {
+          this.silentBlocks++;
+        }
+        // ~5 s of digital silence while media plays means the tap is dead,
+        // typically cross-origin media served without CORS headers.
+        const blocksPerSecond = this.ctx.sampleRate / PROCESSOR_BUFFER;
+        if (this.running && !this.sawAudio && this.silentBlocks > blocksPerSecond * 5) {
+          this.silentBlocks = 0;
+          this.recoverSilentTaps();
+        }
+      }
+      const samples = downsampler.process(channel);
+      if (samples.length) this.onSamples(samples, level);
+    }
+
+    /* ---------------- media elements in the DOM ---------------- */
+
+    async startMedia(elements) {
+      this.ensureGraph();
+      this.running = true;
+      if (this.ctx.state === "suspended") {
+        try { await this.ctx.resume(); } catch (_) {}
+      }
+      let tapped = 0;
+      for (const el of elements) if (this.tapElement(el)) tapped++;
+      return tapped;
+    }
+
+    tapElement(el) {
+      const existing = this.taps.get(el);
+      if (existing) {
+        if (this.tapIsLive(existing)) return true;
+        // A captureStream() track ends with the media it came from, so a
+        // second play() must be given a fresh tap instead of a dead one.
+        LC.log("tap went dead, re-tapping");
+        this.dropTap(el);
+      }
+      this.ensureGraph();
+
+      // 1) captureStream(): non-destructive, page audio path is untouched.
+      const stream = this.captureStream(el);
+      if (stream) {
+        try {
+          const node = this.ctx.createMediaStreamSource(stream);
+          node.connect(this.bus);
+          this.taps.set(el, { node, stream, method: "captureStream", passthrough: false });
+          this.watchTap(el, stream);
+          LC.log("tapped via captureStream", el.currentSrc || el.src);
+          return true;
+        } catch (err) {
+          LC.log("createMediaStreamSource failed", err);
+        }
+      }
+
+      // 2) createMediaElementSource(): permanent re-route, so we have to feed
+      // the element's audio back to the speakers ourselves.
+      try {
+        const node = this.ctx.createMediaElementSource(el);
+        node.connect(this.ctx.destination);
+        node.connect(this.bus);
+        this.taps.set(el, { node, method: "elementSource", passthrough: true });
+        LC.log("tapped via createMediaElementSource", el.currentSrc || el.src);
+        return true;
+      } catch (err) {
+        LC.log("createMediaElementSource failed", err);
+        this.onStatus({ error: "tap-failed", detail: String(err && err.message) });
+        return false;
+      }
+    }
+
+    tapIsLive(tap) {
+      if (tap.method !== "captureStream") return true;
+      const tracks = tap.stream && tap.stream.getAudioTracks ? tap.stream.getAudioTracks() : [];
+      return tracks.some((t) => t.readyState === "live");
+    }
+
+    dropTap(el) {
+      const tap = this.taps.get(el);
+      if (!tap) return;
+      try { tap.node.disconnect(); } catch (_) {}
+      this.taps.delete(el);
+      if (this.primary === "element") this.primary = null;
+    }
+
+    /** Re-tap when the source dies or the element loads something else. */
+    watchTap(el, stream) {
+      const drop = () => this.dropTap(el);
+      if (stream) stream.getAudioTracks().forEach((t) => t.addEventListener("ended", drop));
+      el.addEventListener("emptied", drop);
+      el.addEventListener("loadstart", drop);
+    }
+
+    captureStream(el) {
+      const fn = el.captureStream || el.mozCaptureStream;
+      if (typeof fn !== "function") return null;
+      try {
+        const stream = fn.call(el);
+        if (stream && stream.getAudioTracks && stream.getAudioTracks().length) return stream;
+        return null;
+      } catch (err) {
+        LC.log("captureStream failed", err);
+        return null;
+      }
+    }
+
+    /** Re-tap elements that are playing but delivering pure silence. */
+    recoverSilentTaps() {
+      for (const [el, tap] of this.taps) {
+        if (tap.method !== "captureStream") continue;
+        if (el.paused || el.muted || el.volume === 0) continue;
+        LC.log("silent captureStream tap, retrying with element source");
+        try { tap.node.disconnect(); } catch (_) {}
+        this.taps.delete(el);
+        if (!this.tapElement(el)) this.onStatus({ error: "silent-tap" });
+      }
+    }
+
+    /* ---------------- page hooks: detached media + Web Audio ------------- */
+
+    /** Patch the page's own prototypes so nothing that makes sound is missed. */
+    installPageHooks() {
+      if (this.hooked) return false;
+      const win = window.wrappedJSObject;
+      if (!win || typeof exportFunction !== "function") return false;
+      this.hooked = true;
+      const self = this;
+
+      // Arguments must be passed one by one: handing a content-compartment
+      // array to Function.prototype.apply on a page function makes the page
+      // side read `length` off an object it is not allowed to touch
+      // ("Permission denied to access property length"), which would break
+      // every connect() call on the site.
+      const audioNode = win.AudioNode && win.AudioNode.prototype;
+      if (audioNode && audioNode.connect) {
+        const connect = audioNode.connect;
+        this.rawConnect = connect;
+        exportFunction(
+          function (destination, output, input) {
+            const result = connect.call(this, destination, output, input);
+            try { self.onPageConnect(this, destination); } catch (err) { LC.log("hook connect", err); }
+            return result;
+          },
+          audioNode,
+          { defineAs: "connect" }
+        );
+      }
+
+      const media = win.HTMLMediaElement && win.HTMLMediaElement.prototype;
+      if (media && media.play) {
+        const play = media.play;
+        exportFunction(
+          function () {
+            try { self.onPagePlay(this); } catch (err) { LC.log("hook play", err); }
+            return play.call(this);
+          },
+          media,
+          { defineAs: "play" }
+        );
+      }
+
+      LC.log("page audio hooks installed");
+      return true;
+    }
+
+    /** Anything the page routes to its speakers gets mirrored into a tap. */
+    onPageConnect(node, target) {
+      if (this.disabled || !node || !target) return;
+      const ctx = node.context;
+      if (!ctx || target !== ctx.destination) return;
+      const tap = this.tapPageContext(ctx);
+      if (tap) this.rawConnect.call(node, tap.processor);
+    }
+
+    /** `new Audio(src).play()` never enters the DOM, so the watcher misses it. */
+    onPagePlay(el) {
+      if (this.disabled || !el || el.isConnected) return; // in the DOM: MediaWatcher handles it
+      if (this.taps.has(el)) return;
+      this.ensureGraph();
+      this.running = true;
+      if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
+      if (this.tapElement(el)) {
+        LC.log("tapped detached media element", String(el.currentSrc || el.src).slice(0, 80));
+      }
+    }
+
+    /** One silent ScriptProcessor per page AudioContext, fed by its output. */
+    tapPageContext(ctx) {
+      const existing = this.pageTaps.get(ctx);
+      if (existing) return existing;
+      try {
+        const processor = ctx.createScriptProcessor(PROCESSOR_BUFFER, 1, 1);
+        const mute = ctx.createGain();
+        mute.gain.value = 0;
+        this.rawConnect.call(processor, mute);
+        this.rawConnect.call(mute, ctx.destination);
+
+        const downsampler = new LC.Downsampler(ctx.sampleRate);
+        const key = "webaudio:" + (this.pageTaps.size + 1);
+        const tap = { processor, mute, downsampler, key };
+        processor.onaudioprocess = exportFunction((event) => {
+          const raw = event.inputBuffer.getChannelData(0);
+          // `raw` lives in the page's compartment; copy it before use.
+          const block = new Float32Array(raw.length);
+          for (let i = 0; i < raw.length; i++) block[i] = raw[i];
+          this.handleBlock(block, downsampler, key, false);
+        }, window.wrappedJSObject);
+
+        this.pageTaps.set(ctx, tap);
+        LC.log("tapped page AudioContext", ctx.sampleRate + " Hz");
+        return tap;
+      } catch (err) {
+        LC.log("page context tap failed", err);
+        return null;
+      }
+    }
+
+    /* ---------------- microphone ---------------- */
+
+    async startMic() {
+      this.ensureGraph();
+      this.running = true;
+      if (this.micStream) return true;
+      try {
+        this.micStream = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, echoCancellation: false, noiseSuppression: true, autoGainControl: true },
+        });
+      } catch (err) {
+        this.running = false;
+        this.onStatus({ error: "mic-denied", detail: String(err && err.message) });
+        return false;
+      }
+      const node = this.ctx.createMediaStreamSource(this.micStream);
+      node.connect(this.bus);
+      this.micNode = node;
+      if (this.ctx.state === "suspended") {
+        try { await this.ctx.resume(); } catch (_) {}
+      }
+      return true;
+    }
+
+    /* ---------------- teardown ---------------- */
+
+    stop() {
+      this.running = false;
+      this.sawAudio = false;
+      this.silentBlocks = 0;
+      this.primary = null;
+
+      for (const [el, tap] of this.taps) {
+        if (tap.passthrough) {
+          // Keep source -> destination alive, or the page would go mute.
+          if (tap.method !== "detachedElement") {
+            try { tap.node.disconnect(this.bus); } catch (_) {}
+          }
+        } else {
+          try { tap.node.disconnect(); } catch (_) {}
+          this.taps.delete(el);
+        }
+      }
+
+      if (this.micNode) { try { this.micNode.disconnect(); } catch (_) {} this.micNode = null; }
+      if (this.micStream) {
+        this.micStream.getTracks().forEach((t) => t.stop());
+        this.micStream = null;
+      }
+    }
+
+    /** Called when a stretch of audio ends, so the next one is judged afresh. */
+    noteIdle() {
+      this.sawAudio = false;
+      this.silentBlocks = 0;
+      this.primary = null;
+      for (const [el, tap] of this.taps) {
+        if (!this.tapIsLive(tap)) this.dropTap(el);
+      }
+    }
+
+    describe() {
+      return {
+        elementTaps: Array.from(this.taps.values()).map((t) => t.method),
+        webAudioContexts: this.pageTaps.size,
+        hooksInstalled: this.hooked,
+        primarySource: this.primary || null,
+        heardAudio: this.sawAudio,
+      };
+    }
+  };
+
+  /* ---------------- playback detection ---------------- */
+
+  LC.MediaWatcher = class MediaWatcher {
+    constructor(onChange) {
+      this.onChange = onChange;
+      this.bound = false;
+      this.handler = () => this.onChange(this.playingElements());
+    }
+
+    playingElements() {
+      const els = Array.from(document.querySelectorAll("video, audio"));
+      return els.filter(
+        (el) => !el.paused && !el.ended && !el.muted && el.volume > 0 && el.readyState >= 2
+      );
+    }
+
+    start() {
+      if (this.bound) return;
+      this.bound = true;
+      for (const type of ["play", "playing", "pause", "ended", "volumechange", "emptied"]) {
+        document.addEventListener(type, this.handler, true);
+      }
+      this.timer = setInterval(this.handler, 2000);
+      this.handler();
+    }
+
+    stop() {
+      if (!this.bound) return;
+      this.bound = false;
+      for (const type of ["play", "playing", "pause", "ended", "volumechange", "emptied"]) {
+        document.removeEventListener(type, this.handler, true);
+      }
+      clearInterval(this.timer);
+    }
+  };
+})(globalThis.LiveCaption);

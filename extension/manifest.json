@@ -1,0 +1,82 @@
+{
+  "manifest_version": 3,
+  "name": "Live Caption",
+  "version": "0.1.0",
+  "description": "Automatic on-screen English captions for any audio or video playing in a tab. Speech recognition runs locally in the browser.",
+  "author": "EricZhou866",
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "live-caption@ericzhou866",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": { "required": ["none"] }
+    }
+  },
+
+  "permissions": ["storage", "tabs"],
+
+  "optional_host_permissions": ["<all_urls>"],
+
+  "host_permissions": [
+    "https://huggingface.co/*",
+    "https://cdn-lfs.huggingface.co/*",
+    "https://cdn-lfs-us-1.huggingface.co/*"
+  ],
+
+  "background": {
+    "scripts": [
+      "background/settings.js",
+      "background/wav.js",
+      "background/segmenter.js",
+      "background/engine.js",
+      "background/background.js"
+    ]
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "all_frames": true,
+      "run_at": "document_start",
+      "js": [
+        "content/shared.js",
+        "content/capture.js",
+        "content/overlay.js",
+        "content/main.js"
+      ]
+    }
+  ],
+
+  "action": {
+    "default_title": "Live Caption",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon.svg",
+      "32": "icons/icon.svg",
+      "48": "icons/icon.svg",
+      "96": "icons/icon.svg"
+    }
+  },
+
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg",
+    "128": "icons/icon.svg"
+  },
+
+  "commands": {
+    "toggle-captions": {
+      "suggested_key": { "default": "Ctrl+Shift+L" },
+      "description": "Turn live captions on or off for the current tab"
+    }
+  },
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}
