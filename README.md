@@ -59,7 +59,8 @@ npm run build           # -> web-ext-artifacts/local-live-captions-<version>.xpi
 npm run source          # -> web-ext-artifacts/source-<version>.zip, required by AMO
 ```
 
-[docs/amo-submission.md](docs/amo-submission.md) has the full submission checklist:
+[docs/amo-submission.md](docs/amo-submission.md) has the full submission checklist
+(step-by-step Chinese version: [docs/amo-submission.zh.md](docs/amo-submission.zh.md)):
 listing copy, permission justifications, reviewer notes, and the build instructions AMO
 requires because a minified dependency is vendored. Self-distribution instead:
 `npm run sign` with your AMO API credentials.

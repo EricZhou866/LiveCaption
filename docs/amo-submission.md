@@ -1,6 +1,7 @@
 # Publishing to addons.mozilla.org
 
 Everything needed for the AMO submission, in the order the form asks for it.
+A click-by-click walkthrough in Chinese is in [amo-submission.zh.md](amo-submission.zh.md).
 
 ## 0. Before you upload
 
