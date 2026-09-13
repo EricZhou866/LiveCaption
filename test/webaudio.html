@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><title>Web Audio playback test</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;background:#121216;color:#e8e8ec;margin:0;
+min-height:100vh;display:grid;place-content:center;gap:14px;padding:40px}button{font:inherit;
+padding:8px 16px;border-radius:8px;border:0;background:#2f6fed;color:#fff;cursor:pointer}</style></head>
+<body>
+  <h1>Web Audio playback (no media element)</h1>
+  <p>Audio is decoded and played through an AudioBufferSourceNode, exactly like
+     sites that never create an <code>&lt;audio&gt;</code> tag.</p>
+  <button id="play">Play</button>
+  <p id="state">idle</p>
+  <script>
+    const state = document.getElementById("state");
+    async function start() {
+      const ctx = new AudioContext();
+      console.log("TESTPAGE: ctx created, state =", ctx.state);
+      const bytes = await (await fetch("speech.wav")).arrayBuffer();
+      console.log("TESTPAGE: fetched", bytes.byteLength);
+      const buf = await ctx.decodeAudioData(bytes);
+      console.log("TESTPAGE: decoded", buf.duration.toFixed(1) + "s");
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.connect(ctx.destination);
+      src.start();
+      ctx.resume();
+      state.textContent = "playing via Web Audio at " + ctx.sampleRate + " Hz";
+      console.log("TESTPAGE: web audio playing, ctx =", ctx.state);
+    }
+    document.getElementById("play").addEventListener("click", start);
+    console.log("TESTPAGE: script start");
+    start().catch((e) => {
+      console.log("TESTPAGE: start failed:", e && e.name, e && e.message);
+      state.textContent = "failed: " + (e && e.message);
+    });
+  </script>
+</body></html>
