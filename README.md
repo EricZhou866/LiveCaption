@@ -1,4 +1,4 @@
-# Live Caption for Firefox
+# Local Live Captions for Firefox
 
 Automatic English captions for anything playing in a Firefox tab — video, podcasts,
 meetings, streams — in the spirit of Chrome's Live Caption.
@@ -55,7 +55,7 @@ For a permanent install, build a package and submit it to
 signed add-ons permanently):
 
 ```bash
-npm run build           # -> web-ext-artifacts/live-caption-<version>.xpi
+npm run build           # -> web-ext-artifacts/local-live-captions-<version>.xpi
 npm run source          # -> web-ext-artifacts/source-<version>.zip, required by AMO
 ```
 

@@ -16,6 +16,13 @@ const check = (name, ok, detail) => {
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// The shipped overlay uses a closed shadow root; force it open for the duration of
+// the test so the assertions can reach the panel, then put it back.
+const nativeAttachShadow = Element.prototype.attachShadow;
+Element.prototype.attachShadow = function (init) {
+  return nativeAttachShadow.call(this, { ...init, mode: "open" });
+};
+
 (async () => {
   const saved = [];
   const overlay = new LiveCaption.Overlay({ onClose: () => {}, onGeometry: (g) => saved.push(g) });
@@ -69,6 +76,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   check("stored size is restored", Math.round(fr.width) === 360 && Math.round(fr.height) === 150,
         `${Math.round(fr.width)}x${Math.round(fr.height)}`);
 
+  Element.prototype.attachShadow = nativeAttachShadow;
   out.innerHTML += `\n${results.filter(Boolean).length}/${results.length} checks passed\n`;
   document.title = results.every(Boolean) ? "ALL PASS" : "FAILURES";
 })();

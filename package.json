@@ -1,5 +1,5 @@
 {
-  "name": "live-caption-firefox",
+  "name": "local-live-captions",
   "version": "1.0.0",
   "private": true,
   "description": "Firefox add-on that shows live English captions for any audio playing in a tab, using a local Whisper model.",

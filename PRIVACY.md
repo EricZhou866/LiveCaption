@@ -1,8 +1,8 @@
-# Privacy Policy — Live Caption
+# Privacy Policy — Local Live Captions
 
 _Last updated: 2026-09-13_
 
-Live Caption does not collect, transmit, or sell any personal data. There is no
+Local Live Captions does not collect, transmit, or sell any personal data. There is no
 analytics, no telemetry, and no account.
 
 ## What the add-on processes

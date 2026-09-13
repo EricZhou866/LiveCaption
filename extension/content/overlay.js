@@ -91,7 +91,7 @@ button:hover { opacity: 1; background: rgba(255,255,255,.16); }
       this.box.className = "box hidden";
       this.box.innerHTML = `
         <div class="bar">
-          <div class="grip"><span class="dot"></span><span class="title">Live Caption</span></div>
+          <div class="grip"><span class="dot"></span><span class="title">Local Live Captions</span></div>
           <button data-act="smaller" title="Smaller text">A-</button>
           <button data-act="bigger" title="Larger text">A+</button>
           <button data-act="close" title="Hide captions">✕</button>

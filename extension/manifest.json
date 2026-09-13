@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Live Caption",
+  "name": "Local Live Captions",
   "version": "1.0.0",
   "description": "Automatic on-screen English captions for any audio or video playing in a tab. Speech recognition runs locally in the browser.",
   "author": "EricZhou866",
@@ -49,7 +49,7 @@
   ],
 
   "action": {
-    "default_title": "Live Caption",
+    "default_title": "Local Live Captions",
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon.svg",

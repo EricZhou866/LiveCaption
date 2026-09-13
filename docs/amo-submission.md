@@ -8,15 +8,15 @@ Everything needed for the AMO submission, in the order the form asks for it.
 | --- | --- |
 | Lint is clean | `npm run lint` → 0 errors (2 warnings, explained below) |
 | Version bumped in both places | `extension/manifest.json` and `package.json` |
-| Package built from a clean vendor dir | `npm run build` → `web-ext-artifacts/live-caption-<version>.xpi` |
+| Package built from a clean vendor dir | `npm run build` → `web-ext-artifacts/local-live-captions-<version>.xpi` |
 | Source archive for reviewers | `npm run source` → `web-ext-artifacts/source-<version>.zip` |
 | Tested on a fresh profile | `npm start`, then play audio on a normal site |
 
-**Name.** "Live Caption" is also the name of a Chrome/Android feature. AMO reviewers
-sometimes ask add-ons to avoid names that suggest an association with another vendor. If
-you would rather not risk a rename request mid-review, pick something distinct up front —
-e.g. *Local Live Captions* or *Whisper Captions* — and change `name` in
-`extension/manifest.json` (the add-on ID stays the same, so updates keep working).
+**Name.** The add-on is called **Local Live Captions**, deliberately not "Live Caption": that is the
+name of a Chrome/Android feature, and AMO reviewers ask add-ons to avoid names that
+suggest an association with another vendor. "Local" also says the thing that makes this
+one different. The add-on ID (`live-caption@ericzhou866`) is unrelated to the display
+name and must stay as it is, so updates keep working.
 
 ## 1. Distribution choice
 
@@ -37,7 +37,7 @@ Build environment: Node.js 20+ on macOS or Linux.
 
   npm ci
   npm run vendor     # copies the two vendored runtime files into extension/vendor/
-  npm run build      # zips extension/ into web-ext-artifacts/live-caption-<version>.xpi
+  npm run build      # zips extension/ into web-ext-artifacts/local-live-captions-<version>.xpi
 
 extension/vendor/ is generated, never edited by hand, and contains exactly two files
 copied verbatim from the @huggingface/transformers npm package pinned in package.json
@@ -94,7 +94,7 @@ How to test quickly
 
 ## 4. Listing fields
 
-**Name:** Live Caption _(see the naming note above)_
+**Name:** Local Live Captions
 
 **Summary** (250 char max):
 
@@ -107,9 +107,9 @@ never leaves your computer.
 **Description:**
 
 ```
-Live Caption puts a caption panel over whatever is playing in a tab, the way Chrome's
-Live Caption does — except the speech recognition runs on your own machine, inside
-Firefox, using a Whisper model compiled to WebAssembly.
+Local Live Captions puts a caption panel over whatever is playing in a tab, the way Chrome's Live
+Caption does — except the speech recognition runs on your own machine, inside Firefox,
+using a Whisper model compiled to WebAssembly.
 
 • Captions appear on their own as soon as a tab starts playing audio
 • Everything is local: after the one-time model download the add-on works offline,
