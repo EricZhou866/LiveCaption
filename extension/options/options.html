@@ -2,12 +2,12 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Live Caption — Settings</title>
+  <title>Local Live Captions — Settings</title>
   <link rel="stylesheet" href="options.css" />
 </head>
 <body>
 <main>
-  <h1>Live Caption</h1>
+  <h1>Local Live Captions</h1>
   <p class="lede">
     Captions are generated on your computer with a local Whisper model. Audio never leaves
     the browser unless you deliberately configure a remote endpoint below.
@@ -21,10 +21,10 @@
 
   <section class="card">
     <h2>Behaviour</h2>
-    <label class="check"><input type="checkbox" id="enabled" /> Enable Live Caption</label>
+    <label class="check"><input type="checkbox" id="enabled" /> Enable Local Live Captions</label>
     <label class="check"><input type="checkbox" id="autoStart" /> Show captions automatically when a tab starts playing audio</label>
     <label class="check"><input type="checkbox" id="debug" /> Log capture and recognition events to the console (for troubleshooting)</label>
-    <p class="hint">Read the log at <code>about:debugging</code> → This Firefox → Live Caption → Inspect.</p>
+    <p class="hint">Read the log at <code>about:debugging</code> → This Firefox → Local Live Captions → Inspect.</p>
   </section>
 
   <section class="card">
@@ -120,7 +120,16 @@
         <option value="light">Light</option>
       </select>
     </label>
-    <div class="buttons"><button id="resetPos">Reset caption position</button></div>
+    <label class="field">
+      <span>Keep panel on screen for <output id="autoHideOut"></output></span>
+      <input type="range" id="autoHide" min="0" max="30" step="1" />
+    </label>
+    <p class="hint">Counted from the last caption, once the audio has stopped. Drag the
+      bottom-right corner of the panel to resize it; the size is remembered.</p>
+    <div class="buttons">
+      <button id="resetPos">Reset position</button>
+      <button id="resetSize">Reset size</button>
+    </div>
   </section>
 
   <section class="card">

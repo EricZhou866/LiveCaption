@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><title>Stacking test</title>
+<style>
+  body{font:16px/1.6 system-ui,sans-serif;background:#f4f4f7;color:#16181d;margin:0;padding:40px}
+  /* the kind of panel that covered the captions on a real site */
+  .sidebar{position:fixed;top:0;right:0;width:45vw;height:100vh;background:#fff;
+           border-left:1px solid #ddd;z-index:2147483000;padding:20px;box-sizing:border-box}
+  .banner{position:fixed;left:0;bottom:0;width:100%;height:220px;background:rgba(255,255,255,.98);
+          z-index:2147483640;border-top:1px solid #ddd}
+</style></head>
+<body>
+  <h1>Stacking test</h1>
+  <p>A sidebar at z-index 2147483000 and a bottom banner at 2147483640 — the caption
+     panel has to paint above both.</p>
+  <audio id="a" src="speech.wav" controls loop></audio>
+  <p id="state">—</p>
+  <div class="sidebar">page sidebar (z-index 2147483000)</div>
+  <div class="banner">page banner (z-index 2147483640)</div>
+  <script>
+    const a = document.getElementById("a");
+    a.play().catch(() => {});
+    const name = (el) =>
+      !el ? "none" : el.hasAttribute("data-live-caption") ? "CAPTION" : (el.className || el.tagName);
+
+    setInterval(() => {
+      const host = document.querySelector("[data-live-caption]");
+      if (!host) { document.getElementById("state").textContent = "no caption panel yet"; return; }
+      // The panel is centred, bottom: 8%, width min(720px, 80vw): probe points
+      // that lie inside it and also inside the page's own overlays.
+      const w = innerWidth, h = innerHeight;
+      const panelW = Math.min(720, w * 0.8);
+      const cx = w / 2, right = cx + panelW / 2 - 20;
+      const y = h * 0.92 - 40;
+      const probes = {
+        centre: name(document.elementFromPoint(cx, y)),
+        overSidebar: name(document.elementFromPoint(right, y)),
+        overBanner: name(document.elementFromPoint(cx, h * 0.92 - 10)),
+      };
+      const msg = JSON.stringify(probes);
+      document.getElementById("state").textContent = msg;
+      console.log("TESTPAGE: probe", msg);
+    }, 3000);
+  </script>
+</body></html>

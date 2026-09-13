@@ -42,6 +42,10 @@ function nest(path, value) {
   return out;
 }
 
+function describeHide(ms) {
+  return ms > 0 ? ms / 1000 + " s" : "never hide";
+}
+
 function syncEngineVisibility() {
   const remote = settings.engine === "remote";
   el("localOpts").hidden = remote;
@@ -69,6 +73,8 @@ function render() {
   el("opacity").value = settings.ui.opacity;
   el("opacityOut").textContent = Math.round(settings.ui.opacity * 100) + "%";
   el("theme").value = settings.ui.theme;
+  el("autoHide").value = Math.round((settings.ui.autoHideMs ?? 5000) / 1000);
+  el("autoHideOut").textContent = describeHide(settings.ui.autoHideMs ?? 5000);
 
   el("silenceMs").value = settings.vad.silenceMs;
   el("silenceOut").textContent = settings.vad.silenceMs + " ms";
@@ -103,12 +109,16 @@ async function init() {
   bindValue("maxLines", "ui.maxLines", Number, (v) => (el("maxLinesOut").textContent = v));
   bindValue("opacity", "ui.opacity", Number, (v) => (el("opacityOut").textContent = Math.round(v * 100) + "%"));
   bindValue("theme", "ui.theme");
+  bindValue("autoHide", "ui.autoHideMs", (v) => Number(v) * 1000, (v) =>
+    (el("autoHideOut").textContent = describeHide(v))
+  );
 
   bindValue("silenceMs", "vad.silenceMs", Number, (v) => (el("silenceOut").textContent = v + " ms"));
   bindValue("interimMs", "vad.interimMs", Number, (v) => (el("interimOut").textContent = v + " ms"));
   bindValue("threshold", "vad.threshold", Number, (v) => (el("thresholdOut").textContent = Number(v).toFixed(3)));
 
   el("resetPos").addEventListener("click", () => save({ ui: { position: null } }));
+  el("resetSize").addEventListener("click", () => save({ ui: { size: null } }));
 
   el("download").addEventListener("click", async () => {
     el("modelStatus").textContent = "Downloading… this can take a minute on first use.";

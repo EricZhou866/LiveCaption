@@ -9,7 +9,7 @@ const manifest = JSON.parse(readFileSync(join(root, "extension", "manifest.json"
 const outDir = join(root, "web-ext-artifacts");
 mkdirSync(outDir, { recursive: true });
 
-const xpi = join(outDir, `live-caption-${manifest.version}.xpi`);
+const xpi = join(outDir, `local-live-captions-${manifest.version}.xpi`);
 rmSync(xpi, { force: true });
 execFileSync("zip", ["-qr9", "-X", xpi, ".", "-x", ".*"], { cwd: join(root, "extension") });
 console.log(`${xpi}  (${(statSync(xpi).size / 1048576).toFixed(1)} MB)`);

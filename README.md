@@ -1,4 +1,4 @@
-# Live Caption for Firefox
+# Local Live Captions for Firefox
 
 Automatic English captions for anything playing in a Firefox tab — video, podcasts,
 meetings, streams — in the spirit of Chrome's Live Caption.
@@ -50,13 +50,19 @@ npm start               # launches Firefox with the add-on loaded
 To load it by hand: open `about:debugging#/runtime/this-firefox` → **Load Temporary
 Add-on** → pick `extension/manifest.json`.
 
-For a permanent install, build an unsigned package and submit it to
+For a permanent install, build a package and submit it to
 [addons.mozilla.org](https://addons.mozilla.org/developers/) (Firefox only installs
 signed add-ons permanently):
 
 ```bash
-npm run build           # -> web-ext-artifacts/live-caption-<version>.xpi
+npm run build           # -> web-ext-artifacts/local-live-captions-<version>.xpi
+npm run source          # -> web-ext-artifacts/source-<version>.zip, required by AMO
 ```
+
+[docs/amo-submission.md](docs/amo-submission.md) has the full submission checklist:
+listing copy, permission justifications, reviewer notes, and the build instructions AMO
+requires because a minified dependency is vendored. Self-distribution instead:
+`npm run sign` with your AMO API credentials.
 
 ## Using it
 
@@ -68,7 +74,10 @@ npm run build           # -> web-ext-artifacts/live-caption-<version>.xpi
    from then on.
 
 - `Ctrl+Shift+L` toggles captions for the current tab.
-- Drag the panel by its header; `A-` / `A+` change text size; `✕` hides it.
+- Drag the panel by its header; drag its bottom-right corner to resize it; `A-` / `A+`
+  change text size; `✕` hides it. Position and size are remembered.
+- The panel disappears 5 s after the last caption once the audio stops. That delay is
+  configurable in Settings, including "never hide".
 - Popup → **Microphone** captions audio from your mic instead of the tab, which is the
   way to caption a call, a desktop app, or a site whose media cannot be tapped.
 
@@ -80,6 +89,7 @@ npm run build           # -> web-ext-artifacts/live-caption-<version>.xpi
 | Precision | `q8` is the default; `q4` is faster, `fp16`/`fp32` are for WebGPU. |
 | Compute | CPU (WebAssembly) everywhere; WebGPU where your Firefox build supports it. |
 | Language | Transcribe as spoken, or translate any language into English (needs a multilingual model). |
+| Panel | Font size, visible lines, opacity, theme, and how long the panel lingers after the last caption (0 = never hide). Position and size are remembered; both have reset buttons. |
 | Timing | Pause length that ends a caption line, partial-update interval, and speech sensitivity. |
 | Engine | Local, or an OpenAI-compatible `POST /v1/audio/transcriptions` endpoint (e.g. a local `whisper.cpp` server). |
 
@@ -147,6 +157,11 @@ since content scripts only inject on page load.
 The add-on stores only your settings. Audio is processed in memory and discarded; the
 only network traffic in local mode is the one-time model download from huggingface.co.
 Remote mode uploads 16 kHz WAV segments to the endpoint you configure, and nowhere else.
+
+## Privacy
+
+See [PRIVACY.md](PRIVACY.md). Short version: nothing is collected; the only network
+traffic in local mode is the one-time model download.
 
 ## License
 

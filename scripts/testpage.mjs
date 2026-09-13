@@ -24,10 +24,15 @@ if (!existsSync(wav)) {
   execFileSync("afconvert", ["-f", "WAVE", "-d", "LEI16@44100", "-c", "1", aiff, wav]);
 }
 
-const TYPES = { ".html": "text/html", ".wav": "audio/wav" };
+const TYPES = { ".html": "text/html", ".wav": "audio/wav", ".js": "text/javascript", ".css": "text/css" };
+const extDir = join(root, "..", "extension");
+
 createServer((req, res) => {
-  const file = join(root, req.url === "/" ? "index.html" : decodeURIComponent(req.url).split("?")[0]);
-  if (!file.startsWith(root) || !existsSync(file) || statSync(file).isDirectory()) {
+  const path = req.url === "/" ? "/index.html" : decodeURIComponent(req.url).split("?")[0];
+  // /ext/* exposes the add-on's own sources so a harness page can load them.
+  const base = path.startsWith("/ext/") ? extDir : root;
+  const file = join(base, path.startsWith("/ext/") ? path.slice(5) : path);
+  if (!file.startsWith(base) || !existsSync(file) || statSync(file).isDirectory()) {
     res.writeHead(404).end("not found");
     return;
   }
