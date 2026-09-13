@@ -18,6 +18,10 @@ suggest an association with another vendor. "Local" also says the thing that mak
 one different. The add-on ID (`live-caption@ericzhou866`) is unrelated to the display
 name and must stay as it is, so updates keep working.
 
+**Account:** AMO uses your Firefox Account — the same login you used for your earlier
+add-on. Your existing add-ons are at https://addons.mozilla.org/developers/addons ;
+"Submit a New Add-on" starts this one.
+
 ## 1. Distribution choice
 
 - **Listed on AMO** (recommended): public page, search, automatic updates.
@@ -142,7 +146,7 @@ the length of the phrase being spoken.
 **Categories:** Accessibility (primary), Other / Photos-Music-Videos (secondary)
 **Tags:** captions, subtitles, accessibility, speech recognition, whisper, offline
 **Support site:** https://github.com/EricZhou866/LiveCaption
-**Support email:** _your address_
+**Support email:** EricZhou866@gmail.com
 **Privacy policy:** paste `PRIVACY.md`
 **License:** MIT
 
@@ -151,10 +155,17 @@ the length of the phrase being spoken.
 manifest. Mention the optional user-configured remote endpoint in the reviewer notes
 (already in the text above) so the disclosure is unambiguous.
 
-**Images:** `docs/listing/icon-128.png` for the listing icon, and
-`docs/listing/screenshot-captions.png` as the first screenshot. Add a second one from a
-real session (Settings page or your own video) before submitting — AMO listings convert
-much better with a screenshot of the real thing.
+**Images:**
+
+| File | Use |
+| --- | --- |
+| `docs/listing/icon-128.png` | Listing icon |
+| `docs/listing/screenshot-captions.png` | Screenshot 1 — the caption panel over a player |
+| `docs/listing/screenshot-settings.png` | Screenshot 2 — the Settings page, rendered from the real options page with the shipped defaults |
+
+Both screenshots are generated, not hand-drawn: the first from the add-on's own stylesheet,
+the second from `extension/options/options.html` itself. A third one taken during a real
+session (your own video with captions running) is worth adding if you have one.
 
 ## 5. After approval
 
