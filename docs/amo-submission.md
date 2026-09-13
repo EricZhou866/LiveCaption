@@ -69,6 +69,13 @@ Two lint warnings you will see
 Network access
   1. huggingface.co (+ CDN): one-time download of the model the user selected,
      cached afterwards. Nothing but the model files is requested.
+     These downloads are DATA, not code: .onnx weight files, tokenizer.json,
+     config.json and preprocessor_config.json. They are parsed by the
+     WebAssembly runtime that ships inside the add-on
+     (extension/vendor/), never evaluated as script, so no remote code is
+     executed. The model list is fixed in the Settings page
+     (extension/options/options.html); the user picks one of those entries and
+     cannot point the add-on at an arbitrary URL.
   2. A transcription endpoint the user types in themselves in Settings. This is
      off by default. When it is on, 16 kHz WAV segments go to that URL and nowhere
      else. It exists for people running their own whisper.cpp server.

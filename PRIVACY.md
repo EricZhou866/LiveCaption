@@ -19,7 +19,7 @@ analytics, no telemetry, and no account.
 
 | When | Where | What is sent |
 | --- | --- | --- |
-| First use of a speech model, once per model | `huggingface.co` and its CDN | A normal file download request for the model weights. No audio, no page data, no identifiers beyond what any HTTPS request includes. |
+| First use of a speech model, once per model | `huggingface.co` and its CDN | A normal file download of the model weights and its tokenizer — data files, not program code. No audio, no page data, no identifiers beyond what any HTTPS request includes. |
 | Only if you explicitly configure a remote endpoint in Settings | The URL **you** enter | 16 kHz WAV audio segments and, if you set one, your API key. This is off by default; in local mode it never happens. |
 
 No other connections are made. The add-on does not talk to any server operated by the
