@@ -65,6 +65,18 @@
         </select>
       </label>
       <label class="field">
+        <span>CPU usage</span>
+        <select id="cpu">
+          <option value="high">Smoothest — update the live line as often as possible</option>
+          <option value="balanced">Balanced — default</option>
+          <option value="low">Low — only complete sentences, at pauses</option>
+        </select>
+      </label>
+      <p class="hint">Whisper processes a 30-second window for every update, so "smoothest"
+        keeps a CPU core busy for as long as audio plays — that is what makes Firefox warn
+        that an extension is slowing it down. Partial updates are skipped anyway while the
+        tab is in the background; complete lines are never skipped.</p>
+      <label class="field">
         <span>Language</span>
         <select id="task">
           <option value="transcribe">Transcribe spoken language</option>

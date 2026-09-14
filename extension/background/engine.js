@@ -12,6 +12,8 @@ class LocalEngine {
     this.ready = false;
     this.loadingProgress = null;
     this.queue = Promise.resolve();
+    this.lastDecodeMs = 0;
+    this.lastDecodeEndAt = 0;
   }
 
   ensureWorker() {
@@ -97,10 +99,12 @@ class LocalEngine {
         },
         [samples.buffer]
       );
-      dlog(`decoded ${seconds.toFixed(1)}s in ${Date.now() - t0} ms`);
+      this.lastDecodeMs = Date.now() - t0;
+      dlog(`decoded ${seconds.toFixed(1)}s in ${this.lastDecodeMs} ms`);
       return res.text;
     } finally {
       this.busy = false;
+      this.lastDecodeEndAt = Date.now();
     }
   }
 
@@ -117,6 +121,8 @@ class RemoteEngine {
     this.onStatus = onStatus || (() => {});
     this.busy = false;
     this.queue = Promise.resolve();
+    this.lastDecodeMs = 0;
+    this.lastDecodeEndAt = 0;
   }
 
   async transcribe(samples, settings, { force = false } = {}) {
@@ -133,6 +139,7 @@ class RemoteEngine {
 
   async run(samples, settings, cfg) {
     this.busy = true;
+    const t0 = Date.now();
     try {
       const form = new FormData();
       form.append("file", encodeWav(samples, 16000), "audio.wav");
@@ -153,6 +160,8 @@ class RemoteEngine {
       return null;
     } finally {
       this.busy = false;
+      this.lastDecodeMs = Date.now() - t0;
+      this.lastDecodeEndAt = Date.now();
     }
   }
 

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><title>Capture cost harness</title>
+<style>body{font:14px/1.7 ui-monospace,monospace;background:#15151a;color:#e8e8ec;margin:0;padding:28px}
+.pass{color:#6ee7a0}.fail{color:#ff7a7a}h1{font:600 16px system-ui}</style></head>
+<body>
+<h1>Capture cost harness — what the content script does on an idle page</h1>
+<pre id="out"></pre>
+<script src="/ext/content/shared.js"></script>
+<script src="/ext/content/capture.js"></script>
+<script>
+const out = document.getElementById("out");
+const results = [];
+const check = (name, ok, detail) => {
+  results.push(ok);
+  out.innerHTML += `<span class="${ok ? "pass" : "fail"}">${ok ? "PASS" : "FAIL"}</span> ${name}${detail ? " — " + detail : ""}\n`;
+};
+
+const BLOCK = 4096;               // one ScriptProcessor callback
+const RATE = 48000;
+const silent = new Float32Array(BLOCK);          // digital silence, the common case
+const speech = new Float32Array(BLOCK);
+for (let i = 0; i < BLOCK; i++) speech[i] = Math.sin(i / 8) * 0.2;
+
+let samples = 0;
+const tap = new LiveCaption.AudioTap({ onSamples: () => samples++ });
+
+function time(label, active, block, iterations) {
+  tap.active = active;
+  tap.primary = null;
+  const ds = new LiveCaption.Downsampler(RATE);
+  samples = 0;
+  const t0 = performance.now();
+  for (let i = 0; i < iterations; i++) tap.handleBlock(block, ds, "element", false);
+  const ms = performance.now() - t0;
+  return { ms, perBlock: ms / iterations, samples };
+}
+
+const N = 3000;
+const idle = time("idle", false, silent, N);
+const busy = time("active", true, silent, N);
+
+check("idle page: silent blocks produce no work downstream", idle.samples === 0);
+check("captioning: the same blocks are resampled and forwarded", busy.samples > 0, busy.samples + " chunks");
+check("idle cost is a fraction of the active cost",
+      idle.perBlock * 3 < busy.perBlock,
+      `${(idle.perBlock * 1000).toFixed(1)} µs vs ${(busy.perBlock * 1000).toFixed(1)} µs per block`);
+
+// Per second of an idle page: a ScriptProcessor fires RATE/BLOCK times.
+const perSec = RATE / BLOCK;
+check("idle overhead under 0.5 ms per second of audio",
+      idle.perBlock * perSec < 0.5,
+      `${(idle.perBlock * perSec).toFixed(3)} ms/s`);
+
+// The onset of speech must still be caught on the very first loud block.
+tap.active = false;
+tap.primary = null;
+samples = 0;
+tap.handleBlock(speech, new LiveCaption.Downsampler(RATE), "element", false);
+check("speech onset is not missed while idle", samples > 0);
+
+// A tap that only ever delivers silence must still be detected while idle,
+// otherwise cross-origin media would fail silently with no explanation.
+let recovered = 0;
+tap.active = false;
+tap.running = true;          // media is playing
+tap.sawAudio = false;
+tap.silentBlocks = 0;
+tap.ctx = { sampleRate: RATE };
+tap.recoverSilentTaps = () => recovered++;
+for (let i = 0; i < Math.ceil((RATE / BLOCK) * 6); i++) {
+  tap.handleBlock(silent, new LiveCaption.Downsampler(RATE), "element", true);
+}
+check("a tap stuck on silence is still caught while idle", recovered === 1, recovered + " recovery attempt(s)");
+tap.running = false;
+
+// Timers: an idle page should be running none of ours.
+const watcher = new LiveCaption.MediaWatcher(() => {});
+watcher.start();
+check("no polling timer on an idle page", !watcher.timer);
+watcher.setPolling(true);
+check("polling starts with a caption session", !!watcher.timer);
+watcher.setPolling(false);
+check("polling stops when the session ends", !watcher.timer);
+watcher.stop();
+
+out.innerHTML += `\n${results.filter(Boolean).length}/${results.length} checks passed\n`;
+document.title = results.every(Boolean) ? "ALL PASS" : "FAILURES";
+</script>
+</body></html>

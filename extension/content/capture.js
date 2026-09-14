@@ -29,6 +29,21 @@
       this.silentBlocks = 0;
       this.sawAudio = false;
       this.hooked = false;
+      this.active = false; // a caption session is running: do the full work
+    }
+
+    /** Strided level check — 1/16th of the reads of a full RMS, and for page
+     * taps it avoids copying 4096 samples across the compartment boundary
+     * just to discover that the page is silent. */
+    probe(channel) {
+      let sum = 0;
+      let n = 0;
+      for (let i = 0; i < channel.length; i += 16) {
+        const v = channel[i];
+        sum += v * v;
+        n++;
+      }
+      return Math.sqrt(sum / Math.max(1, n));
     }
 
     /* ---------------- our own graph (DOM elements + microphone) ------------ */
@@ -58,6 +73,13 @@
      * recognizer would interleave two copies of the speech, so the first
      * source that is actually audible owns the stream until it falls quiet. */
     handleBlock(channel, downsampler, key, trackSilence) {
+      // Nothing is being captioned: just watch for the audio starting again.
+      if (!this.active && this.probe(channel) <= SILENCE) {
+        // Keep counting, or a tap that only ever delivers silence (cross-origin
+        // media, typically) would never be detected and reported.
+        if (trackSilence && this.running) this.countSilence();
+        return;
+      }
       const level = LC.rms(channel);
       const now = Date.now();
       if (level > SILENCE) {
@@ -74,18 +96,22 @@
           this.sawAudio = true;
           this.silentBlocks = 0;
         } else if (this.running) {
-          this.silentBlocks++;
-        }
-        // ~5 s of digital silence while media plays means the tap is dead,
-        // typically cross-origin media served without CORS headers.
-        const blocksPerSecond = this.ctx.sampleRate / PROCESSOR_BUFFER;
-        if (this.running && !this.sawAudio && this.silentBlocks > blocksPerSecond * 5) {
-          this.silentBlocks = 0;
-          this.recoverSilentTaps();
+          this.countSilence();
         }
       }
       const samples = downsampler.process(channel);
       if (samples.length) this.onSamples(samples, level);
+    }
+
+    /** ~5 s of digital silence while media plays means the tap is dead,
+     * typically cross-origin media served without CORS headers. */
+    countSilence() {
+      this.silentBlocks++;
+      const blocksPerSecond = (this.ctx ? this.ctx.sampleRate : 48000) / PROCESSOR_BUFFER;
+      if (!this.sawAudio && this.silentBlocks > blocksPerSecond * 5) {
+        this.silentBlocks = 0;
+        this.recoverSilentTaps();
+      }
     }
 
     /* ---------------- media elements in the DOM ---------------- */
@@ -274,7 +300,10 @@
         const tap = { processor, mute, downsampler, key };
         processor.onaudioprocess = exportFunction((event) => {
           const raw = event.inputBuffer.getChannelData(0);
-          // `raw` lives in the page's compartment; copy it before use.
+          // Every read of `raw` crosses the compartment boundary, so check a
+          // strided sample first and bail out before copying 4096 of them.
+          if (!this.active && this.probe(raw) <= SILENCE) return;
+          if (this.primary && this.primary !== key && Date.now() - this.primaryAt < 2000) return;
           const block = new Float32Array(raw.length);
           for (let i = 0; i < raw.length; i++) block[i] = raw[i];
           this.handleBlock(block, downsampler, key, false);
@@ -338,10 +367,18 @@
         this.micStream.getTracks().forEach((t) => t.stop());
         this.micStream = null;
       }
+
+      // With nothing left to listen to, stop our own context entirely. Taps
+      // that re-route an element's audio must keep running or the page would
+      // go silent, so those keep the context alive.
+      if (this.ctx && this.ctx.state === "running" && !this.hasPassthroughTaps() && !this.micStream) {
+        this.ctx.suspend().catch(() => {});
+      }
     }
 
     /** Called when a stretch of audio ends, so the next one is judged afresh. */
     noteIdle() {
+      this.running = false;
       this.sawAudio = false;
       this.silentBlocks = 0;
       this.primary = null;
@@ -383,8 +420,15 @@
       for (const type of ["play", "playing", "pause", "ended", "volumechange", "emptied"]) {
         document.addEventListener(type, this.handler, true);
       }
-      this.timer = setInterval(this.handler, 2000);
       this.handler();
+    }
+
+    /** The capture-phase listeners catch playback starting; the 2 s sweep only
+     * exists to notice players that change state without firing events, so it
+     * runs while captions are on and never on an idle page. */
+    setPolling(on) {
+      if (on && !this.timer) this.timer = setInterval(this.handler, 2000);
+      if (!on && this.timer) { clearInterval(this.timer); this.timer = null; }
     }
 
     stop() {
@@ -393,7 +437,7 @@
       for (const type of ["play", "playing", "pause", "ended", "volumechange", "emptied"]) {
         document.removeEventListener(type, this.handler, true);
       }
-      clearInterval(this.timer);
+      this.setPolling(false);
     }
   };
 })(globalThis.LiveCaption);

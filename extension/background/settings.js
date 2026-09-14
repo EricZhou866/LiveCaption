@@ -6,6 +6,7 @@ var LCSettings = (function () {
     debug: false,           // log pipeline events to the browser console
     enabled: true,          // master switch
     autoStart: true,        // show captions as soon as audio plays
+    cpu: "balanced",        // high | balanced | low — how hard the recogniser runs
     engine: "local",        // local | remote
     // tiny.en decodes a 30 s Whisper window in ~1.6 s on WASM, which is what
     // keeps captions close to real time; base.en is ~2x slower but sharper.

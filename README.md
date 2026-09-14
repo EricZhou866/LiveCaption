@@ -89,6 +89,7 @@ requires because a minified dependency is vendored. Self-distribution instead:
 | Model | `whisper-tiny.en` (default) → `whisper-small.en` (most accurate). Multilingual variants are available for translation. |
 | Precision | `q8` is the default; `q4` is faster, `fp16`/`fp32` are for WebGPU. |
 | Compute | CPU (WebAssembly) everywhere; WebGPU where your Firefox build supports it. |
+| CPU usage | How hard the recogniser is allowed to run: smoothest, balanced (default), or low (complete lines only). Partial updates are skipped while the tab is in the background whatever the setting. |
 | Language | Transcribe as spoken, or translate any language into English (needs a multilingual model). |
 | Panel | Font size, visible lines, opacity, theme, and how long the panel lingers after the last caption (0 = never hide). Position and size are remembered; both have reset buttons. |
 | Timing | Pause length that ends a caption line, partial-update interval, and speech sensitivity. |
@@ -119,6 +120,15 @@ content script                     background page                worker
   than relying on one fixed threshold.
 - Interim decodes are dropped while the engine is busy; final ones are queued, so a
   committed line is never lost.
+- One decode costs about the same whatever the phrase length, so left alone the engine
+  would run back to back and pin a core — which is what makes Firefox warn that an
+  extension is slowing it down. Partial decodes therefore wait for the engine to have
+  been idle long enough to hold a duty cycle (60% by default), and are skipped entirely
+  while the tab is in the background.
+- On a page that is not being captioned the content script costs ~0.005 ms per second of
+  audio and runs no timers at all: audio blocks are checked with a strided probe, and the
+  full resample, the cross-compartment copy and the 2 s media sweep only start once
+  something is actually audible.
 - Common Whisper silence hallucinations (`you`, `Thanks for watching!`, `(music)`) are
   filtered when the segment's energy is low.
 

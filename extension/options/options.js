@@ -60,6 +60,7 @@ function render() {
   el("model").value = settings.model;
   el("dtype").value = settings.dtype;
   el("device").value = settings.device;
+  el("cpu").value = settings.cpu;
   el("task").value = settings.task;
 
   el("remoteUrl").value = settings.remote.url || "";
@@ -100,6 +101,7 @@ async function init() {
   bindValue("model", "model");
   bindValue("dtype", "dtype");
   bindValue("device", "device");
+  bindValue("cpu", "cpu");
   bindValue("task", "task");
   bindValue("remoteUrl", "remote.url");
   bindValue("remoteKey", "remote.apiKey");

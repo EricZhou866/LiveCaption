@@ -14,6 +14,24 @@ function dlog(...args) {
 }
 LCSettings.get().then((s) => (DEBUG = s.debug));
 
+/** How much of the time the recogniser is allowed to be running.
+ *
+ * Whisper decodes a padded 30 s window whatever the phrase length, so on a
+ * CPU-only machine one interim decode costs more than the interval between
+ * them: left alone the engine runs back to back and pins a core, which is
+ * what makes Firefox put up the "slowing down" notice. Final decodes always
+ * run — a committed line must never be lost — but interim ones wait until the
+ * engine has been idle long enough to hold the budget. */
+const DUTY_CYCLE = { high: 0.95, balanced: 0.6, low: 0 };
+
+function interimAllowed(mode, hidden, lastDecodeMs, idleForMs) {
+  if (hidden) return false; // nobody can see the panel; commit lines only
+  const duty = DUTY_CYCLE[mode] != null ? DUTY_CYCLE[mode] : DUTY_CYCLE.balanced;
+  if (duty <= 0) return false;
+  if (!lastDecodeMs) return true;
+  return idleForMs >= (lastDecodeMs * (1 - duty)) / duty;
+}
+
 function engineFor(settings) {
   if (settings.engine === "remote") {
     if (!remoteEngine) remoteEngine = new RemoteEngine((s) => broadcastStatus(s));
@@ -56,6 +74,13 @@ async function decode(session, samples, energy, final) {
   const seconds = samples.length / 16000; // capture before the buffer is transferred
   const settings = await LCSettings.get();
   const engine = engineFor(settings);
+  if (
+    !final &&
+    !interimAllowed(settings.cpu, session.hidden, engine.lastDecodeMs,
+                    Date.now() - (engine.lastDecodeEndAt || 0))
+  ) {
+    return; // skip this partial update to keep the CPU budget
+  }
   let text;
   try {
     text = await engine.transcribe(samples, settings, { force: final });
@@ -149,6 +174,7 @@ async function onFrameMessage(port, msg) {
       if (session.activeFrameId !== null && session.activeFrameId !== info.frameId) return;
       session.activeFrameId = info.frameId;
       session.source = msg.source || "media";
+      session.hidden = !!msg.hidden;
       session.lastFinal = "";
       dlog("session start", { tabId: session.tabId, frameId: info.frameId, source: session.source });
       await ensureSegmenter(session);
@@ -194,6 +220,10 @@ async function onFrameMessage(port, msg) {
       await LCSettings.set({ ui });
       break;
     }
+
+    case "visibility":
+      if (session.activeFrameId === info.frameId) session.hidden = !!msg.hidden;
+      break;
 
     case "capture-status":
       if (msg.error === "no-media") return;
@@ -247,6 +277,7 @@ async function buildDiagnostics() {
           source: session.source,
           activeFrameId: session.activeFrameId,
           hasSegmenter: !!session.segmenter,
+          tabHidden: !!session.hidden,
         }
       : null,
     engine: {

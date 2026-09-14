@@ -95,7 +95,10 @@
   function beginSession() {
     state.sessionActive = true;
     state.lastAudioAt = Date.now();
-    send({ type: "session-start", source: state.source });
+    tap.active = true;          // full-rate processing only while captioning
+    watcher.setPolling(true);   // and only then is the 2 s sweep worth running
+    startTicking();
+    send({ type: "session-start", source: state.source, hidden: document.hidden });
   }
 
   function endSession() {
@@ -103,6 +106,8 @@
     state.sessionActive = false;
     state.pending = [];
     state.pendingLength = 0;
+    tap.active = false;
+    watcher.setPolling(false);
     tap.noteIdle();
     send({ type: "session-stop" });
     // Anything still playing gets a fresh tap for the next stretch of audio.
@@ -166,6 +171,7 @@
         if (!overlay) return;
         overlay.show();
         state.lastCaption = Date.now();
+        startTicking();
         if (msg.final) overlay.pushFinal(msg.text);
         else overlay.setInterim(msg.text);
         break;
@@ -215,8 +221,16 @@
     onBackgroundMessage(msg);
   });
 
-  /* Close the session when the page goes quiet, and hide a stale panel. */
-  setInterval(() => {
+  /* Close the session when the page goes quiet, and hide a stale panel. This
+   * ticks only while there is something to do — an idle frame (which is most
+   * frames on most pages) runs no timer at all. */
+  let tickTimer = null;
+
+  function startTicking() {
+    if (!tickTimer) tickTimer = setInterval(tick, 1000);
+  }
+
+  function tick() {
     if (state.sessionActive && Date.now() - state.lastAudioAt > IDLE_STOP_MS) endSession();
     const ui = (state.settings && state.settings.ui) || {};
     const hideAfter = ui.autoHideMs == null ? DEFAULT_AUTO_HIDE_MS : ui.autoHideMs;
@@ -226,7 +240,18 @@
       overlay.clear();
       state.lastCaption = 0;
     }
-  }, 1000);
+    // With "never hide" there is nothing left to do once the session ends, so
+    // the timer must stop there too — otherwise it would run for the life of
+    // the page, which is exactly the cost this is meant to avoid.
+    if (!state.sessionActive && (hideAfter <= 0 || !state.lastCaption)) {
+      clearInterval(tickTimer);
+      tickTimer = null;
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (state.sessionActive) send({ type: "visibility", hidden: document.hidden });
+  });
 
   window.addEventListener("pagehide", () => stopCapture());
 
