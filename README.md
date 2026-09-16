@@ -29,6 +29,7 @@ Sites make sound in three different ways, and all three are covered:
 | `<audio>`/`<video>` in the DOM | `captureStream()`, falling back to a Web Audio `MediaElementSource` |
 | `new Audio(url).play()` — element never added to the DOM | patched `HTMLMediaElement.prototype.play` |
 | Web Audio with no media element at all | patched `AudioNode.prototype.connect`: anything connected to `ctx.destination` is mirrored into a silent tap in that same context |
+| a stream the page loaded without CORS (most radio players) | the same URL is fetched a second time with `crossOrigin="anonymous"` and read from there — never connected to the speakers |
 
 A `captureStream()` track ends together with the media it came from, so every tap is
 re-validated before reuse and replaced when it has gone dead — otherwise captions would
@@ -92,6 +93,7 @@ requires because a minified dependency is vendored. Self-distribution instead:
 | CPU usage | How hard the recogniser is allowed to run: smoothest, balanced (default), or low (complete lines only). Partial updates are skipped while the tab is in the background whatever the setting. |
 | Language | Transcribe as spoken, or translate any language into English (needs a multilingual model). |
 | Panel | Font size, visible lines, opacity, theme, and how long the panel lingers after the last caption (0 = never hide). Position and size are remembered; both have reset buttons. |
+| Re-fetch uncapturable streams | On by default. Costs the stream's bandwidth twice, and is the only way to caption a player that loads its audio without CORS. |
 | Timing | Pause length that ends a caption line, partial-update interval, and speech sensitivity. |
 | Engine | Local, or an OpenAI-compatible `POST /v1/audio/transcriptions` endpoint (e.g. a local `whisper.cpp` server). |
 
@@ -159,11 +161,14 @@ since content scripts only inject on page load.
 
 ## Limitations
 
-- Media served cross-origin **without** CORS headers cannot be tapped — the Web Audio
-  graph receives digital silence. The add-on detects this after ~5 s and says so; it
-  deliberately does **not** fall back to `createMediaElementSource` there, because that
-  re-routes the element's audio through a node which is required to output silence for
-  such media, muting the page itself. Use microphone mode for those sites. (YouTube, Netflix-style MSE players and most CDNs
+- Media the page loads without asking for CORS reaches the Web Audio graph as digital
+  silence. The add-on detects this after ~5 s and re-fetches the same URL itself with
+  CORS enabled, which is what makes ordinary radio players work; it deliberately does
+  **not** fall back to `createMediaElementSource` there, because that re-routes the
+  element's audio through a node which is required to output silence for such media,
+  muting the page itself. If the server refuses CORS too, or the source is a blob/MSE
+  stream that cannot be re-fetched, the panel says so — microphone mode is the only
+  option then. (YouTube, Netflix-style MSE players and most CDNs
   with `crossorigin` are fine.)
 - `speechSynthesis` output is produced outside the page's audio graph and cannot be
   captured by any page-level API. Microphone mode is the only option there.

@@ -232,6 +232,15 @@ async function onFrameMessage(port, msg) {
       break;
 
     case "capture-status":
+      if (msg.info === "stream-clone") {
+        sendToTab(session.tabId, {
+          type: "status",
+          kind: "ok",
+          show: true,
+          text: "This player can't be captured directly — captioning a second connection to the stream",
+        });
+        return;
+      }
       if (msg.error === "no-media") return;
       sendToTab(session.tabId, {
         type: "status",

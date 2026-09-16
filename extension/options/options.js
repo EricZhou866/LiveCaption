@@ -55,6 +55,7 @@ function syncEngineVisibility() {
 function render() {
   el("enabled").checked = settings.enabled;
   el("autoStart").checked = settings.autoStart;
+  el("streamClone").checked = settings.streamClone;
   el("debug").checked = settings.debug;
   el("engine").value = settings.engine;
   el("model").value = settings.model;
@@ -87,6 +88,8 @@ function render() {
   syncEngineVisibility();
 }
 
+document.getElementById("version").textContent = "v" + browser.runtime.getManifest().version;
+
 async function init() {
   const state = await browser.runtime.sendMessage({ type: "get-state" });
   settings = state.settings;
@@ -96,6 +99,7 @@ async function init() {
 
   bindCheckbox("enabled", "enabled");
   bindCheckbox("autoStart", "autoStart");
+  bindCheckbox("streamClone", "streamClone");
   bindCheckbox("debug", "debug");
   bindValue("engine", "engine", (v) => v, (v) => { settings.engine = v; syncEngineVisibility(); });
   bindValue("model", "model");

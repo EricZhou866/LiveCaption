@@ -145,6 +145,7 @@
         state.mode = msg.mode || "auto";
         state.source = msg.source || "media";
         tap.disabled = !enabled();
+        tap.allowStreamClone = msg.settings.streamClone !== false;
         if (overlay) overlay.applyOptions(msg.settings.ui || {});
         if (!enabled()) {
           stopCapture();

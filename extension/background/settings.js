@@ -10,6 +10,7 @@ var LCSettings = (function () {
     enabled: true,          // master switch
     autoStart: true,        // show captions as soon as audio plays
     cpu: "balanced",        // high | balanced | low — how hard the recogniser runs
+    streamClone: true,      // re-fetch streams the page will not let us capture
     engine: "local",        // local | remote
     // Moonshine's cost follows the length of the audio instead of Whisper's
     // fixed 30 s window: ~0.05x real time against ~0.36x for whisper-tiny.en

@@ -63,3 +63,6 @@ button.link { border: 0; background: none; color: var(--accent); cursor: pointer
 
 footer { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 12px; margin-top: 10px; }
 body.disabled .card:not(.warn) { opacity: .45; pointer-events: none; }
+
+.version { color: var(--muted); font-variant-numeric: tabular-nums; }
+footer { gap: 8px; }

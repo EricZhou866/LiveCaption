@@ -25,6 +25,8 @@
       this.downsampler = null;
       this.taps = new Map(); // HTMLMediaElement -> tap info
       this.unsupported = new WeakSet(); // media we have proved we cannot capture
+      this.ownElements = new WeakSet(); // clones we made, so the hooks skip them
+      this.clones = new Map(); // original element -> { clone, node, sync }
       this.pageTaps = new Map(); // page AudioContext -> tap info
       this.micStream = null;
       this.running = false;
@@ -195,6 +197,7 @@
         try { tap.stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
       }
       if (tap.unwatch) tap.unwatch();
+      this.dropClone(el);
       this.taps.delete(el);
       if (this.primary === "element") this.primary = null;
     }
@@ -214,6 +217,83 @@
           el.removeEventListener("loadstart", drop);
         };
       }
+    }
+
+    /** Last resort for a player we cannot tap: fetch the same stream ourselves
+     * with CORS enabled and listen to that instead.
+     *
+     * Plenty of radio players build a `new Audio(url)` without a crossorigin
+     * attribute, so the browser treats the audio as tainted and hands us
+     * silence — even when the server itself allows CORS, which most do. A
+     * second element that does ask for CORS gets real samples. It is never
+     * connected to the speakers, so the page's own playback is what the user
+     * hears; this one only feeds the recogniser. */
+    tryStreamClone(el) {
+      if (this.clones.has(el)) return true;
+      const url = String(el.currentSrc || el.src || "");
+      // blob:/MSE sources cannot be re-fetched, and there is nothing to gain
+      // from re-fetching same-origin media that already failed.
+      if (!/^https?:/i.test(url) || this.mediaOrigin(el) === location.origin) return false;
+
+      try {
+        this.ensureGraph();
+        const clone = document.createElement("audio");
+        this.ownElements.add(clone);
+        clone.crossOrigin = "anonymous";
+        clone.preload = "auto";
+        clone.src = url;
+
+        const node = this.ctx.createMediaElementSource(clone);
+        node.connect(this.bus); // deliberately not connected to ctx.destination
+
+        const live = !isFinite(el.duration);
+        if (!live) clone.currentTime = el.currentTime;
+
+        const onError = () => {
+          LC.log("stream clone failed", clone.error && clone.error.message);
+          this.dropClone(el);
+          this.unsupported.add(el);
+          this.onStatus({ error: "silent-tap" });
+        };
+        clone.addEventListener("error", onError);
+
+        const mirror = () => {
+          if (el.paused) clone.pause();
+          else clone.play().catch(() => {});
+          // Keep a recording in step with the player; a live stream has no
+          // position to match.
+          if (!live && Math.abs(clone.currentTime - el.currentTime) > 0.5) {
+            clone.currentTime = el.currentTime;
+          }
+        };
+        for (const type of ["play", "pause", "seeked", "ended"]) el.addEventListener(type, mirror);
+        const sync = live ? null : setInterval(mirror, 2000);
+
+        this.clones.set(el, { clone, node, sync, mirror, onError, types: ["play", "pause", "seeked", "ended"] });
+        clone.play().catch(() => {});
+        this.onStatus({ info: "stream-clone" });
+        LC.log("captioning through a CORS clone of", url.slice(0, 80));
+        return true;
+      } catch (err) {
+        LC.log("stream clone failed", err);
+        this.dropClone(el);
+        return false;
+      }
+    }
+
+    dropClone(el) {
+      const c = this.clones.get(el);
+      if (!c) return;
+      this.clones.delete(el);
+      if (c.sync) clearInterval(c.sync);
+      for (const type of c.types) el.removeEventListener(type, c.mirror);
+      try { c.node.disconnect(); } catch (_) {}
+      try {
+        c.clone.removeEventListener("error", c.onError);
+        c.clone.pause();
+        c.clone.removeAttribute("src");
+        c.clone.load();
+      } catch (_) {}
     }
 
     /** Where the media itself comes from. blob:/MSE data was fetched by the
@@ -265,9 +345,11 @@
 
         if (tap.method === "captureStream") {
           if (!this.canUseElementSource(el)) {
-            // The only other route would mute the page. Stop here.
             if (tap.reported) continue;
             tap.reported = true;
+            // Re-fetching the stream with CORS is the only way left that does
+            // not touch the page's own playback.
+            if (this.allowStreamClone && this.tryStreamClone(el)) continue;
             this.unsupported.add(el);
             LC.log("cross-origin media cannot be captured, leaving it alone");
             this.onStatus({ error: "silent-tap" });
@@ -348,6 +430,7 @@
 
     /** `new Audio(src).play()` never enters the DOM, so the watcher misses it. */
     onPagePlay(el) {
+      if (this.ownElements.has(el)) return; // our own capture clone
       if (this.disabled || !el || el.isConnected) return; // in the DOM: MediaWatcher handles it
       if (this.taps.has(el)) return;
       this.ensureGraph();
@@ -439,6 +522,7 @@
         }
       }
 
+      for (const el of Array.from(this.clones.keys())) this.dropClone(el);
       if (this.micNode) { try { this.micNode.disconnect(); } catch (_) {} this.micNode = null; }
       if (this.micStream) {
         this.micStream.getTracks().forEach((t) => t.stop());
@@ -451,6 +535,13 @@
       if (this.ctx && this.ctx.state === "running" && !this.hasPassthroughTaps() && !this.micStream) {
         this.ctx.suspend().catch(() => {});
       }
+    }
+
+    /** Element-source taps carry the page's own sound; suspending the context
+     * while one exists would mute the page. */
+    hasPassthroughTaps() {
+      for (const tap of this.taps.values()) if (tap.passthrough) return true;
+      return false;
     }
 
     /** Called when a stretch of audio ends, so the next one is judged afresh. */
@@ -470,6 +561,7 @@
         webAudioContexts: this.pageTaps.size,
         hooksInstalled: this.hooked,
         primarySource: this.primary || null,
+        streamClones: this.clones.size,
         heardAudio: this.sawAudio,
       };
     }

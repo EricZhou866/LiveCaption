@@ -170,6 +170,24 @@ session (your own video with captions running) is worth adding if you have one.
 
 ## 5. Release notes
 
+### 1.3.0
+
+```
+Captions now work on radio and news players that load their stream without
+asking for CORS — the case where the browser hands an extension silence even
+though the server itself allows it. The add-on fetches the same stream a
+second time, with CORS, purely to read it; that connection is never played
+back, so what you hear is still the page's own player. It can be turned off
+in Settings, where it also explains that it costs the stream's bandwidth
+twice.
+
+The add-on's version is now shown in the toolbar popup and at the top of
+Settings.
+
+Fixed: turning captions off could throw, leaving a tap and, in microphone
+mode, the microphone running until the tab was closed.
+```
+
 ### 1.2.1
 
 ```

@@ -3,6 +3,8 @@
 const el = (id) => document.getElementById(id);
 let state = null;
 
+el("version").textContent = "v" + browser.runtime.getManifest().version;
+
 async function refresh() {
   state = await browser.runtime.sendMessage({ type: "get-state" });
   if (!state) return;

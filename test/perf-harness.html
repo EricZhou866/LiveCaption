@@ -98,6 +98,7 @@ function silentMediaCase(src, crossOrigin) {
     createGain: () => ({ gain: {}, connect() {}, disconnect() {} }),
     createScriptProcessor: () => ({ connect() {}, disconnect() {} }),
     resume: () => Promise.resolve(),
+    suspend: () => Promise.resolve(),
   };
   tap.bus = node;
   const el = {
@@ -132,6 +133,75 @@ function silentMediaCase(src, crossOrigin) {
         "createMediaElementSource called " + r.elementSourceCalls + " times");
   check("same-origin media: the replaced stream is stopped",
         r.created.every((s) => s.getAudioTracks()[0].stopped));
+}
+
+// A player the page loaded without CORS (most radio streams) can still be
+// captioned by fetching the same stream ourselves, with CORS, and listening to
+// that — never to the speakers.
+function streamCloneCase(src, allow, duration = Infinity) {
+  const connects = [];
+  const destination = { id: "destination" };
+  const bus = { id: "bus", connect() {}, disconnect() {} };
+  const sourceNode = { connect: (t) => connects.push(t.id || "node"), disconnect() {} };
+  const elementSourceArgs = [];
+  const tap = new LiveCaption.AudioTap({ onStatus: (s) => tap.statuses.push(s) });
+  tap.statuses = [];
+  tap.allowStreamClone = allow;
+  tap.ctx = {
+    sampleRate: RATE, state: "running", destination,
+    createMediaStreamSource: () => sourceNode,
+    createMediaElementSource: (e) => { elementSourceArgs.push(e); return sourceNode; },
+    createGain: () => ({ gain: {}, connect() {}, disconnect() {} }),
+    createScriptProcessor: () => ({ connect() {}, disconnect() {} }),
+    resume: () => Promise.resolve(),
+    suspend: () => Promise.resolve(),
+  };
+  tap.bus = bus;
+  const tracks = [{ readyState: "live", addEventListener() {}, removeEventListener() {}, stop() {} }];
+  const el = {
+    paused: false, muted: false, volume: 1, isConnected: false, readyState: 4, duration,
+    currentSrc: src, crossOrigin: null, currentTime: 0,
+    addEventListener() {}, removeEventListener() {},
+    captureStream: () => ({ getAudioTracks: () => tracks, getTracks: () => tracks }),
+  };
+  tap.running = true;
+  tap.tapElement(el);
+  tap.recoverSilentTaps();
+  return { tap, el, connects, elementSourceArgs };
+}
+
+{
+  const r = streamCloneCase("https://wunc-ice.streamguys1.com/wunc-128.mp3", true);
+  check("uncapturable stream: a CORS clone is opened", r.tap.clones.size === 1);
+  check("the clone is what goes through Web Audio, not the page's own element",
+        r.elementSourceArgs.length === 1 && r.elementSourceArgs[0] !== r.el,
+        "createMediaElementSource got " + (r.elementSourceArgs[0] === r.el ? "the page's element" : "our clone"));
+  check("the clone asks for CORS", r.tap.clones.get(r.el).clone.crossOrigin === "anonymous");
+  check("the clone feeds the recogniser and nothing else",
+        r.connects.includes("bus") && !r.connects.includes("destination"), JSON.stringify(r.connects));
+  check("the page is told what is happening",
+        r.tap.statuses.some((s) => s.info === "stream-clone"));
+  r.tap.stop();
+  check("stopping captions closes the clone", r.tap.clones.size === 0);
+}
+
+{
+  // A blob/MSE source was fetched by the page itself, so it counts as
+  // same-origin: the element source is safe there and is tried first. There is
+  // nothing to re-fetch, so no clone is opened.
+  const r = streamCloneCase("blob:https://example.com/9f2c", true);
+  check("a blob/MSE source is not re-fetched", r.tap.clones.size === 0);
+  check("it escalates to the element source instead",
+        r.tap.taps.get(r.el).method === "elementSource");
+  r.tap.recoverSilentTaps(); // still silent on the next round
+  check("and only then is the user told it cannot be captioned",
+        r.tap.statuses.filter((s) => s.error === "silent-tap").length === 1);
+}
+
+{
+  const r = streamCloneCase("https://wunc-ice.streamguys1.com/wunc-128.mp3", false);
+  check("the fallback can be turned off", r.tap.clones.size === 0 &&
+        r.tap.statuses.some((s) => s.error === "silent-tap"));
 }
 
 // Timers: an idle page should be running none of ours.

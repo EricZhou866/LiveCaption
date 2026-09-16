@@ -7,7 +7,7 @@
 </head>
 <body>
 <main>
-  <h1>Local Live Captions</h1>
+  <h1>Local Live Captions <span id="version"></span></h1>
   <p class="lede">
     Captions are generated on your computer with a local Whisper model. Audio never leaves
     the browser unless you deliberately configure a remote endpoint below.
@@ -23,6 +23,10 @@
     <h2>Behaviour</h2>
     <label class="check"><input type="checkbox" id="enabled" /> Enable Local Live Captions</label>
     <label class="check"><input type="checkbox" id="autoStart" /> Show captions automatically when a tab starts playing audio</label>
+    <label class="check"><input type="checkbox" id="streamClone" /> Caption streams the page won't let us capture, by fetching them a second time</label>
+    <p class="hint">Many radio players load their stream without asking for CORS, which leaves the
+      browser handing us silence. When that happens this fetches the same stream again, with CORS,
+      purely to read it — it is never played back, but it does use the bandwidth twice.</p>
     <label class="check"><input type="checkbox" id="debug" /> Log capture and recognition events to the console (for troubleshooting)</label>
     <p class="hint">Read the log at <code>about:debugging</code> → This Firefox → Local Live Captions → Inspect.</p>
   </section>
