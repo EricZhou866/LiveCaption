@@ -173,6 +173,12 @@ session (your own video with captions running) is worth adding if you have one.
 ### 1.2.0
 
 ```
+Fixes a bug that could pin a CPU core. On media the add-on cannot capture —
+cross-origin audio without CORS headers, which is common in embedded players
+on news sites — the recovery path looped indefinitely inside an audio
+callback, leaving the page's process busy for as long as the tab stayed open.
+It now escalates once, reports that the media cannot be captioned, and stops.
+
 Much lighter on the CPU. The recogniser now uses Moonshine by default, whose
 cost follows the length of the audio instead of Whisper's fixed 30-second
 window: the same transcript for about a seventh of the work on a short phrase.

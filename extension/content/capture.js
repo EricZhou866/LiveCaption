@@ -12,6 +12,7 @@
 
 (function (LC) {
   const PROCESSOR_BUFFER = 4096;
+  const MAX_PAGE_TAPS = 8;
   const SILENCE = 0.0008;
 
   LC.AudioTap = class AudioTap {
@@ -23,6 +24,7 @@
       this.processor = null;
       this.downsampler = null;
       this.taps = new Map(); // HTMLMediaElement -> tap info
+      this.unsupported = new WeakSet(); // media we have proved we cannot capture
       this.pageTaps = new Map(); // page AudioContext -> tap info
       this.micStream = null;
       this.running = false;
@@ -127,7 +129,8 @@
       return tapped;
     }
 
-    tapElement(el) {
+    tapElement(el, preferElementSource = false) {
+      if (this.unsupported.has(el)) return false;
       const existing = this.taps.get(el);
       if (existing) {
         if (this.tapIsLive(existing)) return true;
@@ -139,7 +142,7 @@
       this.ensureGraph();
 
       // 1) captureStream(): non-destructive, page audio path is untouched.
-      const stream = this.captureStream(el);
+      const stream = preferElementSource ? null : this.captureStream(el);
       if (stream) {
         try {
           const node = this.ctx.createMediaStreamSource(stream);
@@ -179,6 +182,12 @@
       const tap = this.taps.get(el);
       if (!tap) return;
       try { tap.node.disconnect(); } catch (_) {}
+      // A captureStream() track keeps running — and keeps costing the page's
+      // process — until it is stopped. Dropping the node is not enough.
+      if (tap.stream) {
+        try { tap.stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+      }
+      if (tap.unwatch) tap.unwatch();
       this.taps.delete(el);
       if (this.primary === "element") this.primary = null;
     }
@@ -186,9 +195,18 @@
     /** Re-tap when the source dies or the element loads something else. */
     watchTap(el, stream) {
       const drop = () => this.dropTap(el);
-      if (stream) stream.getAudioTracks().forEach((t) => t.addEventListener("ended", drop));
+      const tracks = stream ? stream.getAudioTracks() : [];
+      tracks.forEach((t) => t.addEventListener("ended", drop));
       el.addEventListener("emptied", drop);
       el.addEventListener("loadstart", drop);
+      const tap = this.taps.get(el);
+      if (tap) {
+        tap.unwatch = () => {
+          tracks.forEach((t) => t.removeEventListener("ended", drop));
+          el.removeEventListener("emptied", drop);
+          el.removeEventListener("loadstart", drop);
+        };
+      }
     }
 
     captureStream(el) {
@@ -204,15 +222,35 @@
       }
     }
 
-    /** Re-tap elements that are playing but delivering pure silence. */
+    /** Deal with a tap that is alive but carrying pure silence.
+     *
+     * This escalates exactly once, to the Web Audio element source, and then
+     * gives up: retrying `captureStream()` on media that cannot be captured
+     * (cross-origin without CORS) just mints a new live MediaStream every few
+     * seconds, and those keep costing the page's process for as long as the
+     * tab is open. */
     recoverSilentTaps() {
-      for (const [el, tap] of this.taps) {
-        if (tap.method !== "captureStream") continue;
+      // Iterate a snapshot: re-tapping re-inserts into this.taps, and a Map
+      // iterator visits entries added during iteration — which is how the
+      // previous version span forever inside an audio callback.
+      for (const [el, tap] of Array.from(this.taps)) {
         if (el.paused || el.muted || el.volume === 0) continue;
-        LC.log("silent captureStream tap, retrying with element source");
-        try { tap.node.disconnect(); } catch (_) {}
-        this.taps.delete(el);
-        if (!this.tapElement(el)) this.onStatus({ error: "silent-tap" });
+
+        if (tap.method === "captureStream") {
+          LC.log("silent captureStream tap, escalating to element source");
+          this.dropTap(el);
+          if (!this.tapElement(el, true)) this.onStatus({ error: "silent-tap" });
+          continue;
+        }
+
+        if (!tap.reported) {
+          // Already on the element source and still silent: this media cannot
+          // be captured at all. Say so once, and stop trying.
+          tap.reported = true;
+          this.unsupported.add(el);
+          LC.log("media cannot be captured, giving up", String(el.currentSrc || el.src).slice(0, 80));
+          this.onStatus({ error: "silent-tap" });
+        }
       }
     }
 
@@ -288,6 +326,9 @@
     tapPageContext(ctx) {
       const existing = this.pageTaps.get(ctx);
       if (existing) return existing;
+      // Some players build a fresh AudioContext per sound. Tap a handful and
+      // stop: each tap costs a processor callback for the life of the page.
+      if (this.pageTaps.size >= MAX_PAGE_TAPS) return null;
       try {
         const processor = ctx.createScriptProcessor(PROCESSOR_BUFFER, 1, 1);
         const mute = ctx.createGain();
