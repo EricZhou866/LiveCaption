@@ -24,6 +24,24 @@ env.backends.onnx.wasm.wasmPaths = {
 env.backends.onnx.wasm.numThreads = 1;
 env.backends.onnx.wasm.proxy = false;
 
+/** Whisper always encodes a padded 30-second window, so a short phrase costs
+ * as much as a long one; Moonshine's cost follows the length of the audio,
+ * which is what live captioning actually needs. They also take different
+ * options: Moonshine is English-only and does its own chunking.
+ *
+ * Exported so the benchmark page drives the models exactly as the add-on does. */
+export function decodeOptions(model, language, task) {
+  const options = { return_timestamps: false, max_new_tokens: 180, num_beams: 1, do_sample: false };
+  const isMoonshine = /moonshine/i.test(model);
+  const englishOnly = isMoonshine || /\.en\b|\.en$/.test(model);
+  if (!isMoonshine) options.chunk_length_s = 30;
+  if (!englishOnly) {
+    options.language = language || "en";
+    options.task = task === "translate" ? "translate" : "transcribe";
+  }
+  return options;
+}
+
 let transcriber = null;
 let loadedKey = null;
 let loading = null;
@@ -82,19 +100,8 @@ self.onmessage = async (event) => {
 
     if (msg.type === "transcribe") {
       const model = await load(msg);
-      const options = {
-        chunk_length_s: 30,
-        return_timestamps: false,
-        max_new_tokens: 180,
-        // Greedy decoding keeps latency predictable for live captioning.
-        num_beams: 1,
-        do_sample: false,
-      };
-      // English-only checkpoints reject explicit language/task arguments.
-      if (!/\.en\b|\.en$/.test(msg.model)) {
-        options.language = msg.language || "en";
-        options.task = msg.task === "translate" ? "translate" : "transcribe";
-      }
+      // Greedy decoding keeps latency predictable for live captioning.
+      const options = decodeOptions(msg.model, msg.language, msg.task);
       const out = await model(msg.audio, options);
       const text = Array.isArray(out) ? out.map((o) => o.text).join(" ") : out.text;
       self.postMessage({ type: "result", id: msg.id, text: (text || "").trim() });

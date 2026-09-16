@@ -33,10 +33,15 @@ const check = (name, got, want) => {
 
 const DECODE = 1500; // measured: whisper-tiny.en on WASM
 
-// balanced = 40% duty: after a 1.5 s decode the engine must idle 2.25 s
+// balanced = 25% duty: after a 1.5 s decode the engine must idle 4.5 s
 check("balanced: blocked immediately after a decode", interimAllowed("balanced", false, DECODE, 0), false);
-check("balanced: still blocked at 2.2 s idle", interimAllowed("balanced", false, DECODE, 2200), false);
-check("balanced: allowed at 2.25 s idle", interimAllowed("balanced", false, DECODE, 2250), true);
+check("balanced: still blocked at 4.4 s idle", interimAllowed("balanced", false, DECODE, 4400), false);
+check("balanced: allowed at 4.5 s idle", interimAllowed("balanced", false, DECODE, 4500), true);
+
+// the default model decodes in ~400 ms, so the same budget lets the live line
+// update about every 1.6 s instead of every 6 s
+check("cheap decodes need only a short pause", interimAllowed("balanced", false, 400, 1200), true);
+check("cheap decodes are still spaced out", interimAllowed("balanced", false, 400, 1100), false);
 
 // high = 95% duty: a short breather only
 check("high: blocked at 50 ms idle", interimAllowed("high", false, DECODE, 50), false);
@@ -52,11 +57,11 @@ check("hidden tab: no interims even on high", interimAllowed("high", true, DECOD
 check("no measurement yet: allowed", interimAllowed("balanced", false, 0, 0), true);
 
 // an unknown value falls back to balanced rather than running flat out
-check("unknown mode falls back to balanced", interimAllowed(undefined, false, DECODE, 2200), false);
+check("unknown mode falls back to balanced", interimAllowed(undefined, false, DECODE, 4400), false);
 
 // duty cycle actually achieved, as a sanity check on the arithmetic
-const idle = (DECODE * (1 - 0.4)) / 0.4;
-check("balanced duty cycle is 40%", Math.round((DECODE / (DECODE + idle)) * 100), 40);
+const idle = (DECODE * (1 - 0.25)) / 0.25;
+check("balanced duty cycle is 25%", Math.round((DECODE / (DECODE + idle)) * 100), 25);
 
 console.log(failures ? `\n${failures} FAILED` : "\nall throttle checks passed");
 process.exitCode = failures ? 1 : 0;

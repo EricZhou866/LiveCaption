@@ -129,8 +129,8 @@ using a Whisper model compiled to WebAssembly.
 • Works with ordinary <video>/<audio> players, with sites that play through the Web
   Audio API, and with a microphone source for calls or anything Firefox cannot tap
 • Drag the panel anywhere, resize it, change the text size, pick dark or light
-• Choose your accuracy/speed trade-off: whisper-tiny.en for the fastest captions,
-  base or small when you want more accuracy; WebGPU if your build supports it
+• Choose your accuracy/speed trade-off: Moonshine for the fastest captions,
+  Whisper when you need another language; WebGPU if your build supports it
 • Can translate other languages into English with a multilingual model
 • Optionally point it at your own transcription server instead (OpenAI-compatible)
 
@@ -169,6 +169,27 @@ the second from `extension/options/options.html` itself. A third one taken durin
 session (your own video with captions running) is worth adding if you have one.
 
 ## 5. Release notes
+
+### 1.2.0
+
+```
+Much lighter on the CPU. The recogniser now uses Moonshine by default, whose
+cost follows the length of the audio instead of Whisper's fixed 30-second
+window: the same transcript for about a seventh of the work on a short phrase.
+Measured over a 75-second listening session, the add-on now runs the
+recogniser 17% of the time against 60% in 1.0.0, while updating the live
+caption line more often than before, not less.
+
+Existing installations that never changed the model are moved to the new
+default automatically; a model you chose yourself is left alone.
+
+Whisper is still available in Settings for other languages and for
+translating into English.
+```
+
+Reviewer notes for this version: no change to permissions, network access or the
+vendored runtime. The new model is fetched from the same host as before
+(huggingface.co) and, as before, only from a fixed list in the Settings page.
 
 ### 1.1.0
 

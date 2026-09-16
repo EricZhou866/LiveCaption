@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><title>Model bench</title>
+<style>body{font:13px/1.6 ui-monospace,monospace;background:#15151a;color:#e8e8ec;margin:0;padding:24px}
+td,th{padding:3px 12px 3px 0;text-align:left;vertical-align:top}th{color:#8a8a96}
+.n{color:#6ee7a0}.t{color:#cfcfd6;max-width:60ch}</style></head>
+<body>
+<h1 style="font:600 15px system-ui">Cost per caption update — Whisper vs Moonshine</h1>
+<p id="status">loading…</p>
+<table id="out"><tr><th>model</th><th>window</th><th>decode</th><th>× real time</th><th>text</th></tr></table>
+<script type="module">
+// Importing the worker applies the add-on's own runtime configuration (wasm
+// paths, thread count, cache) and hands us the exact decode options it uses,
+// so this measures the shipped setup rather than an approximation of it.
+const { decodeOptions } = await import("/ext/background/asr-worker.js");
+const { pipeline } = await import("/ext/vendor/transformers.min.js");
+
+const status = document.getElementById("status");
+const out = document.getElementById("out");
+const row = (cells, cls = "") => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = cells.map((c, i) => `<td class="${i >= 2 && i <= 3 ? "n" : i === 4 ? "t" : ""}">${c}</td>`).join("");
+  out.appendChild(tr);
+};
+
+const buf = await (await fetch("speech.wav")).arrayBuffer();
+const ctx = new OfflineAudioContext(1, 1, 16000);
+const decoded = await ctx.decodeAudioData(buf);
+const off = new OfflineAudioContext(1, Math.ceil(decoded.duration * 16000), 16000);
+const src = off.createBufferSource(); src.buffer = decoded; src.connect(off.destination); src.start();
+const pcm = (await off.startRendering()).getChannelData(0);
+
+// the windows the segmenter actually asks for: a phrase in progress, then longer
+const WINDOWS = [4, 8, 12];
+const MODELS = [
+  ["onnx-community/whisper-tiny.en", "q8"],
+  ["onnx-community/moonshine-tiny-ONNX", "q8"],
+  ["onnx-community/moonshine-base-ONNX", "q8"],
+];
+
+for (const [model, dtype] of MODELS) {
+  status.textContent = `loading ${model}…`;
+  let asr;
+  try {
+    asr = await pipeline("automatic-speech-recognition", model, { dtype, device: "wasm" });
+  } catch (e) {
+    row([model, "—", "—", "—", "FAILED: " + e.message]);
+    continue;
+  }
+  for (const secs of WINDOWS) {
+    const clip = pcm.slice(0, 16000 * secs);
+    const options = decodeOptions(model, "en", "transcribe");
+    await asr(clip.slice(0, 16000), options); // warm up the graph once
+    const t0 = performance.now();
+    const r = await asr(clip, options);
+    const ms = performance.now() - t0;
+    row([model.split("/").pop(), secs + "s", Math.round(ms) + " ms", (ms / (secs * 1000)).toFixed(2) + "×",
+         (r.text || "").trim().slice(0, 70)]);
+    status.textContent = `${model} @ ${secs}s → ${Math.round(ms)} ms`;
+  }
+  await asr.dispose();
+}
+status.textContent = "done";
+document.title = "BENCH DONE";
+</script>
+</body></html>

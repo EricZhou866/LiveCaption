@@ -13,7 +13,7 @@ Firefox does not ship the two APIs a Chrome-style captioner would normally use:
 
 | Missing in Firefox | What this add-on does instead |
 | --- | --- |
-| `SpeechRecognition` (Web Speech API) | Runs Whisper locally via `transformers.js` + onnxruntime-web (WASM, optional WebGPU) |
+| `SpeechRecognition` (Web Speech API) | Runs Moonshine or Whisper locally via `transformers.js` + onnxruntime-web (WASM, optional WebGPU) |
 | `chrome.tabCapture` | Taps the page's audio itself — see *Capture paths* below |
 
 The speech runtime (transformers.js 3.8.1 with onnxruntime-web) is vendored into the
@@ -86,7 +86,7 @@ requires because a minified dependency is vendored. Self-distribution instead:
 
 | Setting | Notes |
 | --- | --- |
-| Model | `whisper-tiny.en` (default) → `whisper-small.en` (most accurate). Multilingual variants are available for translation. |
+| Model | `moonshine-tiny` (default) and `moonshine-base` for English; Whisper `tiny`/`base`/`small` when you need another language or translation. |
 | Precision | `q8` is the default; `q4` is faster, `fp16`/`fp32` are for WebGPU. |
 | Compute | CPU (WebAssembly) everywhere; WebGPU where your Firefox build supports it. |
 | CPU usage | How hard the recogniser is allowed to run: smoothest, balanced (default), or low (complete lines only). Partial updates are skipped while the tab is in the background whatever the setting. |
@@ -127,12 +127,12 @@ content script                     background page                worker
   background. Measured over a 75 s listening session (`npm test`, whisper-tiny.en at
   1.5 s per decode):
 
-  | CPU usage | Duty cycle | Live-line updates | Committed lines |
+  | Version / setting | Duty cycle | Live-line updates | Committed lines |
   | --- | --- | --- | --- |
-  | Smoothest (1.0.0 behaviour) | 60% | 23 | 7 |
-  | Balanced (default) | 40% | 13 | 7 |
-  | Low | 14% | 0 | 7 |
-  | any, tab in the background | 14% | 0 | 7 |
+  | 1.0.0 (whisper-tiny.en, no budget) | 60% | 23 | 7 |
+  | **1.2.0 default** (moonshine-tiny, balanced) | **17%** | **25** | 7 |
+  | 1.2.0 smoothest | 31% | 51 | 7 |
+  | Low, or any setting with the tab in the background | 4-14% | 0 | 7 |
 
   Committed lines are never dropped, whatever the budget — only the partial updates in
   between are.
@@ -167,11 +167,18 @@ since content scripts only inject on page load.
   captured by any page-level API. Microphone mode is the only option there.
 - Captions lag speech by roughly the length of the current phrase — Whisper needs a
   chunk of audio, so this is inherently not word-by-word streaming.
-- Whisper always processes a padded 30 s window, so one decode costs about the same
-  whatever the phrase length. Measured on an M-series Mac, single-threaded WASM:
-  `tiny.en` ≈ 1.6 s per decode, `base.en` ≈ 3.5 s. That decode time is the floor on how
-  often the live line can update, which is why `tiny.en` is the default; `small` is
-  only sensible with WebGPU or a fast desktop CPU.
+- Whisper always encodes a padded 30 s window, so one decode costs about the same
+  whatever the phrase length; Moonshine's cost follows the audio. Measured on an
+  M-series Mac, single-threaded WASM (`test/model-bench.html`), for the same transcript:
+
+  | Model | 4 s phrase | 8 s | 12 s |
+  | --- | --- | --- | --- |
+  | `moonshine-tiny` (default) | 203 ms | 436 ms | 698 ms |
+  | `moonshine-base` | 425 ms | 892 ms | 1462 ms |
+  | `whisper-tiny.en` | 1356 ms | 1563 ms | 1707 ms |
+
+  That is why Moonshine is the default: the live line can update several times a second
+  of audio without the recogniser ever running flat out.
 - DRM (Widevine) playback cannot be captured at all.
 
 ## Privacy

@@ -36,7 +36,11 @@ for (let i = 0; i < out.length; i++) {
   for (let j = start; j < end; j++) sum += pcm16[j] / 0x8000;
   out[i] = sum / Math.max(1, end - start);
 }
-const DECODE_MS = 1500; // measured: whisper-tiny.en, 30 s window, WASM
+// Measured by test/model-bench.html on the same clip, same runtime:
+// whisper encodes a fixed 30 s window whatever the phrase length, Moonshine
+// does not, so its cost tracks the audio (~0.05x real time).
+const WHISPER_MS = 1500;
+const MOONSHINE_MS = 400;
 
 /** A long listening session: the real clip back to back. A synthetic tone will
  * not do — the VAD's adaptive noise floor correctly learns to ignore one. */
@@ -46,7 +50,7 @@ function longSession(times) {
   return buf;
 }
 
-function run(mode, hidden = false, audio = out) {
+function run(mode, hidden = false, audio = out, DECODE_MS = WHISPER_MS) {
   const settings = LCSettings.DEFAULTS;
   let busyUntil = 0, lastDecodeEnd = 0, busyTotal = 0;
   const log = { interims: 0, finals: 0, skipped: 0 };
@@ -85,7 +89,8 @@ const check = (name, ok, detail) => {
 };
 
 const clip = (out.length / 16000).toFixed(1);
-console.log(`clip: ${clip}s of real speech, decode cost ${DECODE_MS} ms per update\n`);
+console.log(`clip: ${clip}s of real speech\n`);
+console.log(`whisper-tiny.en, ${WHISPER_MS} ms per update (1.0.0 / 1.1.0 default):`);
 
 const high = run("high");
 const balanced = run("balanced");
@@ -113,7 +118,7 @@ for (const r of [talkHigh, talkBalanced, talkLow]) {
 console.log();
 
 check("1.0.0 keeps the recogniser busy most of the time", talkHigh.duty >= 55, `${talkHigh.duty}%`);
-check("balanced brings it under half", talkBalanced.duty <= 45, `${talkBalanced.duty}%`);
+check("balanced brings it well under half", talkBalanced.duty <= 30, `${talkBalanced.duty}%`);
 check("balanced still updates the live line", talkBalanced.interims > 0, `${talkBalanced.interims} partial updates`);
 check("low mode runs no partial updates", talkLow.interims === 0 && low.interims === 0);
 check("hidden tab runs no partial updates", background.interims === 0);
@@ -122,9 +127,30 @@ check("no committed line is lost, whatever the budget",
       talkBalanced.finals === talkHigh.finals && talkLow.finals === talkHigh.finals,
       `${high.finals} lines on the clip, ${talkHigh.finals} on continuous speech, in every mode`);
 check("balanced cuts the work substantially",
-      talkBalanced.duty <= talkHigh.duty * 0.75, `${talkHigh.duty}% -> ${talkBalanced.duty}%`);
+      talkBalanced.duty <= talkHigh.duty * 0.6, `${talkHigh.duty}% -> ${talkBalanced.duty}%`);
 check("low mode is a big step down again", talkLow.duty <= talkBalanced.duty * 0.6,
       `${talkBalanced.duty}% -> ${talkLow.duty}%`);
+
+/* --- the 1.2.0 default: the same timeline with Moonshine's cost --- */
+const moonHigh = run("high", false, talk, MOONSHINE_MS);
+const moonBalanced = run("balanced", false, talk, MOONSHINE_MS);
+console.log(`\nsame 75s session with moonshine-tiny, ${MOONSHINE_MS} ms per update (1.2.0 default):`);
+for (const r of [moonHigh, moonBalanced]) {
+  console.log(
+    `  ${r.mode}`.padEnd(26) +
+    `duty ${String(r.duty).padStart(3)}%   interims ${r.interims}   finals ${r.finals}   skipped ${r.skipped}`
+  );
+}
+console.log();
+
+check("the new default runs at a third of 1.0.0's CPU", moonBalanced.duty <= talkHigh.duty / 3,
+      `${talkHigh.duty}% in 1.0.0 -> ${moonBalanced.duty}% now`);
+check("and still updates the live line more often than 1.1.0 did",
+      moonBalanced.interims >= talkBalanced.interims,
+      `${talkBalanced.interims} -> ${moonBalanced.interims} partial updates`);
+check("smoothest remains available for anyone who wants it",
+      moonHigh.interims > moonBalanced.interims && moonHigh.duty <= 35,
+      `${moonHigh.interims} updates at ${moonHigh.duty}% duty`);
 
 Date.now = realNow;
 console.log(failures ? `\n${failures} FAILED` : "\nall timeline checks passed");

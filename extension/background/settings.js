@@ -2,15 +2,19 @@
 "use strict";
 
 var LCSettings = (function () {
+  const SCHEMA = 2; // bump when a stored value needs rewriting on upgrade
+
   const DEFAULTS = {
+    schema: SCHEMA,
     debug: false,           // log pipeline events to the browser console
     enabled: true,          // master switch
     autoStart: true,        // show captions as soon as audio plays
     cpu: "balanced",        // high | balanced | low — how hard the recogniser runs
     engine: "local",        // local | remote
-    // tiny.en decodes a 30 s Whisper window in ~1.6 s on WASM, which is what
-    // keeps captions close to real time; base.en is ~2x slower but sharper.
-    model: "onnx-community/whisper-tiny.en",
+    // Moonshine's cost follows the length of the audio instead of Whisper's
+    // fixed 30 s window: ~0.05x real time against ~0.36x for whisper-tiny.en
+    // on a 4 s phrase, for the same transcript.
+    model: "onnx-community/moonshine-tiny-ONNX",
     dtype: "q8",            // q4 | q8 | fp16 | fp32
     device: "wasm",         // wasm | webgpu
     language: "en",
@@ -65,6 +69,17 @@ var LCSettings = (function () {
     return next;
   }
 
+  /** Users who never touched the model picker are still on the old default,
+   * which is the slow one — the reason Firefox flagged the add-on. Move them
+   * across on upgrade, and leave a deliberate choice alone. */
+  async function migrate() {
+    const current = await get();
+    if (current.schema >= SCHEMA) return current;
+    const patch = { schema: SCHEMA };
+    if (current.model === "onnx-community/whisper-tiny.en") patch.model = DEFAULTS.model;
+    return set(patch);
+  }
+
   browser.storage.onChanged.addListener((changes, area) => {
     if (area !== "local" || !changes.settings) return;
     cache = merge(DEFAULTS, changes.settings.newValue || {});
@@ -73,5 +88,5 @@ var LCSettings = (function () {
     }
   });
 
-  return { DEFAULTS, get, set, onChange: (fn) => listeners.add(fn) };
+  return { DEFAULTS, get, set, migrate, onChange: (fn) => listeners.add(fn) };
 })();

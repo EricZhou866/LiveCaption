@@ -24,11 +24,11 @@ LCSettings.get().then((s) => (DEBUG = s.debug));
  * engine has been idle long enough to hold the budget.
  *
  * The budget has to be tighter than the rhythm the segmenter already imposes
- * or it changes nothing: a partial update is emitted roughly every 1.5 s and a
- * decode costs about that much, so anything above ~0.5 leaves the recogniser
- * running back to back. At 0.4 the live line updates every ~4.5 s instead of
- * every ~3 s, for a third less CPU. */
-const DUTY_CYCLE = { high: 0.95, balanced: 0.4, low: 0 };
+ * or it changes nothing: partial updates are emitted roughly every 1.5 s, so
+ * anything above ~0.5 leaves an expensive recogniser running back to back.
+ * A quarter keeps the default model updating the line about every 1.6 s while
+ * leaving three quarters of the time idle. */
+const DUTY_CYCLE = { high: 0.95, balanced: 0.25, low: 0 };
 
 function interimAllowed(mode, hidden, lastDecodeMs, idleForMs) {
   if (hidden) return false; // nobody can see the panel; commit lines only
@@ -407,6 +407,14 @@ LCSettings.onChange((s) => {
 
 browser.runtime.onInstalled.addListener(async ({ reason }) => {
   if (reason === "install") browser.runtime.openOptionsPage();
+  if (reason === "update") {
+    const before = await LCSettings.get();
+    const after = await LCSettings.migrate();
+    if (after.model !== before.model) {
+      dlog("migrated model", before.model, "->", after.model);
+      if (localEngine) localEngine.reload();
+    }
+  }
 });
 
 
