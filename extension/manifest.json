@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Local Live Captions",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Automatic on-screen English captions for any audio or video playing in a tab. Speech recognition runs locally in the browser.",
   "author": "EricZhou866",
   "homepage_url": "https://github.com/EricZhou866/LiveCaption",

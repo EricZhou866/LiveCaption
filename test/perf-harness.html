@@ -73,50 +73,65 @@ for (let i = 0; i < Math.ceil((RATE / BLOCK) * 6); i++) {
 check("a tap stuck on silence is still caught while idle", recovered === 1, recovered + " recovery attempt(s)");
 tap.running = false;
 
-// Media that cannot be captured (cross-origin without CORS) used to make the
-// watchdog mint a new live MediaStream every five seconds, for ever.
-{
+// Media that cannot be captured used to make the watchdog mint a new live
+// MediaStream every five seconds for ever — and escalating to the Web Audio
+// element source silenced the page, because that node outputs silence for
+// cross-origin media.
+function silentMediaCase(src, crossOrigin) {
   const created = [];
-  const track = () => {
+  let elementSourceCalls = 0;
+  const makeStream = () => {
     const t = { readyState: "live", stopped: false,
                 addEventListener() {}, removeEventListener() {}, stop() { t.stopped = true; } };
-    return t;
-  };
-  const makeStream = () => {
-    const tracks = [track()];
+    const tracks = [t];
     const s = { getAudioTracks: () => tracks, getTracks: () => tracks };
     created.push(s);
     return s;
   };
   const node = { connect() {}, disconnect() {} };
-  const probe = new LiveCaption.AudioTap({ onStatus: (s) => probe.statuses.push(s) });
-  probe.statuses = [];
-  probe.ctx = {
+  const tap = new LiveCaption.AudioTap({ onStatus: (s) => tap.statuses.push(s) });
+  tap.statuses = [];
+  tap.ctx = {
     sampleRate: RATE, state: "running", destination: {},
-    createMediaStreamSource: () => node, createMediaElementSource: () => node,
+    createMediaStreamSource: () => node,
+    createMediaElementSource: () => { elementSourceCalls++; return node; },
     createGain: () => ({ gain: {}, connect() {}, disconnect() {} }),
     createScriptProcessor: () => ({ connect() {}, disconnect() {} }),
     resume: () => Promise.resolve(),
   };
-  probe.bus = node;
+  tap.bus = node;
   const el = {
     paused: false, muted: false, volume: 1, isConnected: true, readyState: 4,
-    currentSrc: "https://cdn.example.com/stream.mp3",
+    currentSrc: src, crossOrigin,
     addEventListener() {}, removeEventListener() {},
     captureStream: () => makeStream(),
   };
-  probe.running = true;
-  probe.tapElement(el);
-  for (let i = 0; i < 6; i++) probe.recoverSilentTaps();   // six watchdog rounds
+  tap.running = true;
+  tap.tapElement(el);
+  for (let i = 0; i < 6; i++) tap.recoverSilentTaps(); // six watchdog rounds
+  return { created, elementSourceCalls, tap, el,
+           silentTapReports: tap.statuses.filter((s) => s.error === "silent-tap").length };
+}
 
-  check("uncapturable media does not mint a stream per retry", created.length <= 2,
-        created.length + " streams created over six rounds");
-  check("dropped capture streams are stopped", created.slice(0, -1).every((s) => s.getAudioTracks()[0].stopped) ||
-        created.every((s) => s.getAudioTracks()[0].stopped),
-        created.filter((s) => s.getAudioTracks()[0].stopped).length + " of " + created.length + " stopped");
-  check("it escalates to the element source once", probe.taps.get(el).method === "elementSource");
-  check("and reports the failure exactly once", probe.statuses.filter((s) => s.error === "silent-tap").length === 1,
-        JSON.stringify(probe.statuses));
+{
+  // wunc.org: the stream comes from another origin with no crossorigin attribute
+  const r = silentMediaCase("https://playerservices.streamtheworld.com/api/livestream", null);
+  check("cross-origin media: the page is never routed through our graph",
+        r.elementSourceCalls === 0, "createMediaElementSource called " + r.elementSourceCalls + " times");
+  check("cross-origin media: no stream per retry", r.created.length <= 1,
+        r.created.length + " streams over six rounds");
+  check("cross-origin media: reported exactly once", r.silentTapReports === 1);
+  check("cross-origin media: nothing retries afterwards", r.tap.unsupported.has(r.el));
+}
+
+{
+  // same-origin media that happens to deliver silence: escalation is safe here
+  const r = silentMediaCase(location.origin + "/speech.wav", null);
+  check("same-origin media: escalates to the element source once",
+        r.elementSourceCalls === 1 && r.tap.taps.get(r.el).method === "elementSource",
+        "createMediaElementSource called " + r.elementSourceCalls + " times");
+  check("same-origin media: the replaced stream is stopped",
+        r.created.every((s) => s.getAudioTracks()[0].stopped));
 }
 
 // Timers: an idle page should be running none of ours.

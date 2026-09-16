@@ -170,9 +170,16 @@ session (your own video with captions running) is worth adding if you have one.
 
 ## 5. Release notes
 
-### 1.2.0
+### 1.2.1
 
 ```
+Never silences a page. On media that cannot be captured (cross-origin audio
+without CORS headers — common in the embedded players on news sites) the
+add-on used to fall back to routing the element through the Web Audio API,
+which for that kind of media outputs silence: the captions stayed empty and
+the page went quiet after a few seconds. It now leaves such players alone and
+says so, suggesting microphone mode instead.
+
 Fixes a bug that could pin a CPU core. On media the add-on cannot capture —
 cross-origin audio without CORS headers, which is common in embedded players
 on news sites — the recovery path looped indefinitely inside an audio

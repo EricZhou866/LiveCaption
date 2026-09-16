@@ -157,7 +157,14 @@
       }
 
       // 2) createMediaElementSource(): permanent re-route, so we have to feed
-      // the element's audio back to the speakers ourselves.
+      // the element's audio back to the speakers ourselves — and we must be
+      // sure the audio will come through, or the page goes mute.
+      if (!this.canUseElementSource(el)) {
+        this.unsupported.add(el);
+        this.onStatus({ error: "silent-tap" });
+        return false;
+      }
+      if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
       try {
         const node = this.ctx.createMediaElementSource(el);
         node.connect(this.ctx.destination);
@@ -209,6 +216,26 @@
       }
     }
 
+    /** Where the media itself comes from. blob:/MSE data was fetched by the
+     * page, so it counts as same-origin. */
+    mediaOrigin(el) {
+      const src = String(el.currentSrc || el.src || "");
+      if (!src || /^(blob|data|mediasource):/.test(src)) return location.origin;
+      try {
+        return new URL(src, location.href).origin;
+      } catch (_) {
+        return location.origin;
+      }
+    }
+
+    /** createMediaElementSource() re-routes an element's audio through our
+     * graph permanently, and for cross-origin media without CORS the node is
+     * required to output silence — which silences the page itself. Never take
+     * that path unless the media can actually come through it. */
+    canUseElementSource(el) {
+      return this.mediaOrigin(el) === location.origin || !!el.crossOrigin;
+    }
+
     captureStream(el) {
       const fn = el.captureStream || el.mozCaptureStream;
       if (typeof fn !== "function") return null;
@@ -237,6 +264,15 @@
         if (el.paused || el.muted || el.volume === 0) continue;
 
         if (tap.method === "captureStream") {
+          if (!this.canUseElementSource(el)) {
+            // The only other route would mute the page. Stop here.
+            if (tap.reported) continue;
+            tap.reported = true;
+            this.unsupported.add(el);
+            LC.log("cross-origin media cannot be captured, leaving it alone");
+            this.onStatus({ error: "silent-tap" });
+            continue;
+          }
           LC.log("silent captureStream tap, escalating to element source");
           this.dropTap(el);
           if (!this.tapElement(el, true)) this.onStatus({ error: "silent-tap" });

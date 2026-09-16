@@ -241,7 +241,7 @@ async function onFrameMessage(port, msg) {
           msg.error === "mic-denied"
             ? "Microphone access denied"
             : msg.error === "silent-tap"
-            ? "This player's audio can't be captured (cross-origin media)"
+            ? "This player's audio can't be captured — switch to Microphone in the toolbar popup"
             : "Could not capture audio from this page",
       });
       break;

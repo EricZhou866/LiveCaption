@@ -160,9 +160,10 @@ since content scripts only inject on page load.
 ## Limitations
 
 - Media served cross-origin **without** CORS headers cannot be tapped — the Web Audio
-  graph receives digital silence. The add-on detects this after ~5 s, escalates once to
-  the Web Audio element source, and if that is silent too it says so and stops trying;
-  use microphone mode for those sites. (YouTube, Netflix-style MSE players and most CDNs
+  graph receives digital silence. The add-on detects this after ~5 s and says so; it
+  deliberately does **not** fall back to `createMediaElementSource` there, because that
+  re-routes the element's audio through a node which is required to output silence for
+  such media, muting the page itself. Use microphone mode for those sites. (YouTube, Netflix-style MSE players and most CDNs
   with `crossorigin` are fine.)
 - `speechSynthesis` output is produced outside the page's audio graph and cannot be
   captured by any page-level API. Microphone mode is the only option there.
