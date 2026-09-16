@@ -169,7 +169,21 @@ First release.
 
 ```bash
 # 改代码，然后两处版本号一起改：extension/manifest.json 和 package.json
+npm test                  # 回归：节流逻辑 + 真实音频时间线
 npm run build && npm run source
+```
+
+1.1.0 的版本说明（Release Notes）可以直接用：
+
+```
+性能：识别不再几乎连续运行——这正是 Firefox 提示「扩展拖慢浏览器」的原因。临时字幕更新
+现在受 CPU 预算限制，标签页在后台时完全不做；已成句的字幕永远不会被跳过。
+
+新增设置「CPU usage」：最流畅（等同 1.0.0）、平衡（新默认，CPU 约降三分之一）、
+低（只在停顿处出整句）。
+
+另外，没有字幕任务的页面几乎不再有开销：不跑任何定时器，音频块改用低成本探测而不是
+逐块重采样。
 ```
 
 开发者后台 → 该插件 → **Manage Status & Versions** → **Upload New Version**，

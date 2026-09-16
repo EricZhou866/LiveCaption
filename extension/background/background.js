@@ -21,8 +21,14 @@ LCSettings.get().then((s) => (DEBUG = s.debug));
  * them: left alone the engine runs back to back and pins a core, which is
  * what makes Firefox put up the "slowing down" notice. Final decodes always
  * run — a committed line must never be lost — but interim ones wait until the
- * engine has been idle long enough to hold the budget. */
-const DUTY_CYCLE = { high: 0.95, balanced: 0.6, low: 0 };
+ * engine has been idle long enough to hold the budget.
+ *
+ * The budget has to be tighter than the rhythm the segmenter already imposes
+ * or it changes nothing: a partial update is emitted roughly every 1.5 s and a
+ * decode costs about that much, so anything above ~0.5 leaves the recogniser
+ * running back to back. At 0.4 the live line updates every ~4.5 s instead of
+ * every ~3 s, for a third less CPU. */
+const DUTY_CYCLE = { high: 0.95, balanced: 0.4, low: 0 };
 
 function interimAllowed(mode, hidden, lastDecodeMs, idleForMs) {
   if (hidden) return false; // nobody can see the panel; commit lines only

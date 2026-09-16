@@ -168,7 +168,28 @@ Both screenshots are generated, not hand-drawn: the first from the add-on's own 
 the second from `extension/options/options.html` itself. A third one taken during a real
 session (your own video with captions running) is worth adding if you have one.
 
-## 5. After approval
+## 5. Release notes
+
+### 1.1.0
+
+```
+Performance: the recogniser no longer runs almost continuously while audio
+plays, which is what made Firefox report the add-on as slowing the browser
+down. Partial caption updates now hold a CPU budget and are skipped while the
+tab is in the background; complete caption lines are never skipped.
+
+New setting — CPU usage: Smoothest (1.0.0 behaviour), Balanced (new default,
+about a third less CPU) or Low (complete sentences only, at pauses).
+
+Also: a page that is not being captioned now costs almost nothing — no timers,
+and audio blocks are checked with a cheap probe instead of being resampled.
+```
+
+Reviewer notes for this version: nothing changed about permissions, network
+access or the vendored runtime; the diff is scheduling and a new setting. The
+same source archive instructions apply.
+
+## 6. After approval
 
 - Updates: bump both versions, `npm run build`, upload the new XPI on the add-on's
   *Manage Versions* page. Users update automatically.

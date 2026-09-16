@@ -120,11 +120,22 @@ content script                     background page                worker
   than relying on one fixed threshold.
 - Interim decodes are dropped while the engine is busy; final ones are queued, so a
   committed line is never lost.
-- One decode costs about the same whatever the phrase length, so left alone the engine
-  would run back to back and pin a core — which is what makes Firefox warn that an
-  extension is slowing it down. Partial decodes therefore wait for the engine to have
-  been idle long enough to hold a duty cycle (60% by default), and are skipped entirely
-  while the tab is in the background.
+- One decode costs about the same whatever the phrase length, so left alone the
+  recogniser runs almost continuously — which is what makes Firefox warn that an
+  extension is slowing it down. Partial decodes therefore wait until the engine has been
+  idle long enough to hold a duty cycle, and are skipped entirely while the tab is in the
+  background. Measured over a 75 s listening session (`npm test`, whisper-tiny.en at
+  1.5 s per decode):
+
+  | CPU usage | Duty cycle | Live-line updates | Committed lines |
+  | --- | --- | --- | --- |
+  | Smoothest (1.0.0 behaviour) | 60% | 23 | 7 |
+  | Balanced (default) | 40% | 13 | 7 |
+  | Low | 14% | 0 | 7 |
+  | any, tab in the background | 14% | 0 | 7 |
+
+  Committed lines are never dropped, whatever the budget — only the partial updates in
+  between are.
 - On a page that is not being captioned the content script costs ~0.005 ms per second of
   audio and runs no timers at all: audio blocks are checked with a strided probe, and the
   full resample, the cross-compartment copy and the 2 s media sweep only start once
