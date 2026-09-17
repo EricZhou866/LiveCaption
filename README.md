@@ -188,6 +188,52 @@ since content scripts only inject on page load.
   of audio without the recogniser ever running flat out.
 - DRM (Widevine) playback cannot be captured at all.
 
+## Release notes
+
+### 1.3.0 — on AMO
+
+- **Radio and news players work now.** Players that load their stream with
+  `new Audio(url)` and no `crossorigin` attribute hand the browser tainted audio, so
+  every capture route returns silence — even though the stream host usually does allow
+  CORS. The add-on re-fetches the same URL itself with CORS enabled and reads that,
+  wired to the recogniser only and never to the speakers. Costs the stream's bandwidth
+  twice; switch it off in Settings if that matters.
+- The version number is shown in the toolbar popup and at the top of Settings.
+- Fixed: turning captions off threw (a method lost in a refactor), so taps stayed
+  connected and microphone mode kept the microphone open until the tab closed.
+
+### 1.2.1 — not published
+
+- Fixed: the add-on could silence the page it was captioning. On media it could not
+  capture it fell back to `createMediaElementSource`, which permanently routes the
+  element's audio through the Web Audio graph — and that node is specified to output
+  silence for cross-origin media without CORS. The destructive path is now gated on the
+  audio actually being able to come through it.
+
+### 1.2.0 — not published
+
+- **Fixed the bug behind "Local Live Captions is slowing down Firefox".**
+  `recoverSilentTaps()` deleted a tap from a Map and re-added it during iteration; a Map
+  iterator visits entries inserted while iterating, and the re-added tap always matched
+  the same condition, so the loop never ended — inside an audio callback, on every page
+  whose media could not be captured. It also leaked a live `MediaStream` per retry.
+- Switched the recogniser to Moonshine, whose cost follows the length of the audio
+  instead of Whisper's fixed 30-second window: 203 ms against 1356 ms for a 4-second
+  phrase, for the same transcript. Whisper remains available for other languages.
+- Installations that never changed the model are migrated to the new default.
+
+### 1.1.0 — not published
+
+- A CPU budget for partial caption updates (Settings → CPU usage), and partial updates
+  are skipped entirely while the tab is in the background. Committed caption lines are
+  never skipped.
+- An idle page now runs none of the add-on's timers, and audio blocks are checked with a
+  strided probe instead of being resampled: 0.005 ms per second of audio.
+
+### 1.0.0 — on AMO
+
+First release.
+
 ## Privacy
 
 The add-on stores only your settings. Audio is processed in memory and discarded; the
