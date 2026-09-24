@@ -66,3 +66,5 @@ body.disabled .card:not(.warn) { opacity: .45; pointer-events: none; }
 
 .version { color: var(--muted); font-variant-numeric: tabular-nums; }
 footer { gap: 8px; }
+
+button.primary:disabled { opacity: .45; cursor: default; }

@@ -27,6 +27,17 @@ async function refresh() {
       ? "Captions stay on for this tab."
       : "Captions are off for this tab.";
 
+  el("transcriptCard").hidden = !state.settings.transcript;
+  if (state.settings.transcript) {
+    const n = state.transcriptLines || 0;
+    el("saveTranscript").disabled = n === 0;
+    if (!el("transcriptHint").dataset.sticky) {
+      el("transcriptHint").textContent = n
+        ? `${n} line${n === 1 ? "" : "s"} from this tab, saved as a .txt file to Downloads.`
+        : "Nothing captioned on this tab yet.";
+    }
+  }
+
   const engine = state.settings.engine === "remote" ? "Remote endpoint" : shortModel(state.settings.model);
   el("engineLabel").textContent = engine;
 
@@ -65,6 +76,14 @@ el("source").addEventListener("click", async (e) => {
     source,
   });
   refresh();
+});
+
+el("saveTranscript").addEventListener("click", async () => {
+  if (!state || !state.tab) return;
+  const hint = el("transcriptHint");
+  const res = await browser.runtime.sendMessage({ type: "save-transcript", tabId: state.tab.id });
+  hint.dataset.sticky = "1";
+  hint.textContent = res && res.ok ? `Saved ${res.lines} lines to Downloads.` : (res && res.error) || "Could not save.";
 });
 
 el("grant").addEventListener("click", async () => {

@@ -48,6 +48,7 @@ button {
   font: 600 13px/20px system-ui, sans-serif; opacity: .65; cursor: pointer;
 }
 button:hover { opacity: 1; background: rgba(255,255,255,.16); }
+button[hidden] { display: none; } /* all:unset above would otherwise override [hidden] */
 .box.light button:hover { background: rgba(0,0,0,.1); }
 
 .lines { flex: 1 1 auto; max-height: calc(var(--lc-lines, 3) * 1.42em); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
@@ -63,8 +64,9 @@ button:hover { opacity: 1; background: rgba(255,255,255,.16); }
 `;
 
   LC.Overlay = class Overlay {
-    constructor({ onClose, onGeometry } = {}) {
+    constructor({ onClose, onGeometry, onSave } = {}) {
       this.onClose = onClose || (() => {});
+      this.onSave = onSave || (() => {});
       this.onGeometry = onGeometry || (() => {});
       this.finals = [];
       this.interim = "";
@@ -92,6 +94,7 @@ button:hover { opacity: 1; background: rgba(255,255,255,.16); }
       this.box.innerHTML = `
         <div class="bar">
           <div class="grip"><span class="dot"></span><span class="title">Local Live Captions</span></div>
+          <button data-act="save" title="Save transcript" hidden>↓</button>
           <button data-act="smaller" title="Smaller text">A-</button>
           <button data-act="bigger" title="Larger text">A+</button>
           <button data-act="close" title="Hide captions">✕</button>
@@ -111,6 +114,7 @@ button:hover { opacity: 1; background: rgba(255,255,255,.16); }
         if (!act) return;
         e.stopPropagation();
         if (act === "close") this.onClose();
+        if (act === "save") this.onSave();
         if (act === "bigger") this.bumpFont(2);
         if (act === "smaller") this.bumpFont(-2);
       });
@@ -208,6 +212,8 @@ button:hover { opacity: 1; background: rgba(255,255,255,.16); }
         this.box.classList.remove("sized");
       }
       this.box.classList.toggle("light", o.theme === "light");
+      const saveBtn = this.box.querySelector('[data-act="save"]');
+      if (saveBtn) saveBtn.hidden = !o.transcript;
       if (o.position && o.position.left != null) this.setPosition(o.position.left, o.position.top);
     }
 

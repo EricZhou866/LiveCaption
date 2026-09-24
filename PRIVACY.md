@@ -1,6 +1,6 @@
 # Privacy Policy — Local Live Captions
 
-_Last updated: 2026-09-13_
+_Last updated: 2026-09-24_
 
 Local Live Captions does not collect, transmit, or sell any personal data. There is no
 analytics, no telemetry, and no account.
@@ -10,8 +10,14 @@ analytics, no telemetry, and no account.
 - **Audio from the tab or your microphone.** It is read only while captions are on,
   converted to 16 kHz mono in memory, transcribed, and discarded. It is never written to
   disk and never sent anywhere in the default (local) mode.
-- **Captions.** Shown on screen only. They are not stored, logged, or uploaded, and are
-  discarded when the panel closes.
+- **Captions.** Shown on screen only. By default they are not stored, logged, or
+  uploaded, and are discarded when the panel closes.
+- **Transcripts — only if you turn them on.** The *Transcript* setting is off by default.
+  When you switch it on, the caption lines of each tab are kept **in memory** so that you
+  can save them. They are written to disk only when you click *Save transcript*, and only
+  to a `.txt` file in your own Downloads folder. A tab's transcript is discarded when the
+  tab is closed or loads another page, and every transcript is discarded the moment you
+  switch the setting off. Transcripts are never uploaded anywhere.
 - **Your settings** (model, appearance, panel position and size, timing). Stored locally
   with the browser's extension storage. They never leave your computer.
 
@@ -33,6 +39,8 @@ developer, because there isn't one.
 - **Microphone** — only when you switch the audio source to Microphone; Firefox asks each
   site for permission in the usual way.
 - **Storage** — your settings.
+- **Downloads** (optional) — requested only when you switch on transcripts, and used only
+  to save the transcript file you ask for.
 - **Tabs** — to know which tab is playing and to keep captions per tab.
 
 ## Contact

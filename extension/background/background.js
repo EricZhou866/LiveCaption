@@ -106,9 +106,51 @@ async function decode(session, samples, energy, final) {
   if (final) {
     if (text === session.lastFinal) return;
     session.lastFinal = text;
+    if (settings.transcript) recordLine(session, text);
   }
   sendToTab(session.tabId, { type: "caption", text, final });
   if (final) sendToTab(session.tabId, { type: "status", text: "Listening…", kind: "ok" });
+}
+
+/* ---------------- transcript ---------------- */
+
+/** Write the tab's transcript to the Downloads folder as a .txt file. */
+async function saveTranscript(tabId) {
+  const session = sessions.get(tabId);
+  const lines = (session && session.transcript) || [];
+  if (!lines.length) return { ok: false, error: "Nothing to save yet" };
+  const allowed = await browser.permissions.contains({ permissions: ["downloads"] });
+  if (!allowed || !browser.downloads) {
+    return { ok: false, error: "Allow downloads for Local Live Captions in Settings first" };
+  }
+
+  const tab = await browser.tabs.get(tabId).catch(() => null);
+  const savedAt = Date.now();
+  const text = formatTranscript(lines, { title: tab && tab.title, url: tab && tab.url, savedAt });
+  const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+  try {
+    const id = await browser.downloads.download({
+      url,
+      filename: transcriptFilename(tab && tab.title, savedAt),
+      saveAs: false,
+      conflictAction: "uniquify",
+    });
+    const release = (delta) => {
+      if (delta.id !== id || !delta.state || delta.state.current === "in_progress") return;
+      URL.revokeObjectURL(url);
+      browser.downloads.onChanged.removeListener(release);
+    };
+    browser.downloads.onChanged.addListener(release);
+    setTimeout(() => URL.revokeObjectURL(url), 60000); // backstop
+    return { ok: true, lines: lines.length };
+  } catch (err) {
+    URL.revokeObjectURL(url);
+    return { ok: false, error: err.message };
+  }
+}
+
+function clearTranscripts() {
+  for (const session of sessions.values()) session.transcript = [];
 }
 
 /* ---------------- messaging ---------------- */
@@ -227,6 +269,17 @@ async function onFrameMessage(port, msg) {
       break;
     }
 
+    case "save-transcript": {
+      const res = await saveTranscript(info.tabId);
+      sendToTab(info.tabId, {
+        type: "status",
+        kind: res.ok ? "ok" : "error",
+        show: true,
+        text: res.ok ? `Transcript saved to Downloads (${res.lines} lines)` : res.error,
+      });
+      break;
+    }
+
     case "visibility":
       if (session.activeFrameId === info.frameId) session.hidden = !!msg.hidden;
       break;
@@ -293,6 +346,7 @@ async function buildDiagnostics() {
           activeFrameId: session.activeFrameId,
           hasSegmenter: !!session.segmenter,
           tabHidden: !!session.hidden,
+          transcriptLines: session.transcript ? session.transcript.length : 0,
         }
       : null,
     engine: {
@@ -320,6 +374,7 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
         mode: session ? session.mode : "auto",
         source: session ? session.source : "media",
         active: session ? session.activeFrameId !== null : false,
+        transcriptLines: session && session.transcript ? session.transcript.length : 0,
         modelReady: !!(localEngine && localEngine.ready),
       };
     }
@@ -366,6 +421,9 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
     case "diagnose":
       return buildDiagnostics();
 
+    case "save-transcript":
+      return saveTranscript(msg.tabId);
+
     case "clear-model-cache": {
       try {
         await caches.delete("transformers-cache");
@@ -406,11 +464,13 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   session.activeFrameId = null;
   session.segmenter = null;
   session.lastFinal = "";
+  session.transcript = [];
   updateBadge(session);
 });
 
 LCSettings.onChange((s) => {
   DEBUG = s.debug;
+  if (!s.transcript) clearTranscripts();
   for (const tabId of sessions.keys()) pushConfig(tabId);
 });
 

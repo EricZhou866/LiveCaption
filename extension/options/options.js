@@ -56,6 +56,7 @@ function render() {
   el("enabled").checked = settings.enabled;
   el("autoStart").checked = settings.autoStart;
   el("streamClone").checked = settings.streamClone;
+  el("transcript").checked = settings.transcript;
   el("debug").checked = settings.debug;
   el("engine").value = settings.engine;
   el("model").value = settings.model;
@@ -100,6 +101,19 @@ async function init() {
   bindCheckbox("enabled", "enabled");
   bindCheckbox("autoStart", "autoStart");
   bindCheckbox("streamClone", "streamClone");
+
+  // Saving a file needs the optional "downloads" permission; ask for it at the
+  // moment the user turns the feature on, and back out if they decline.
+  el("transcript").addEventListener("change", async (e) => {
+    if (e.target.checked) {
+      const granted = await browser.permissions.request({ permissions: ["downloads"] });
+      if (!granted) {
+        e.target.checked = false;
+        return;
+      }
+    }
+    save({ transcript: e.target.checked });
+  });
   bindCheckbox("debug", "debug");
   bindValue("engine", "engine", (v) => v, (v) => { settings.engine = v; syncEngineVisibility(); });
   bindValue("model", "model");

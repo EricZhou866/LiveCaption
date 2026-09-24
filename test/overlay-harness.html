@@ -76,6 +76,22 @@ Element.prototype.attachShadow = function (init) {
   check("stored size is restored", Math.round(fr.width) === 360 && Math.round(fr.height) === 150,
         `${Math.round(fr.width)}x${Math.round(fr.height)}`);
 
+  // 4. the transcript button: hidden unless the feature is on
+  let saves = 0;
+  const withSave = new LiveCaption.Overlay({ onSave: () => saves++ });
+  withSave.applyOptions({ fontSize: 20, maxLines: 3 });
+  withSave.show();
+  const hosts = document.querySelectorAll("[data-live-caption]");
+  const saveBox = hosts[hosts.length - 1].shadowRoot.querySelector(".box");
+  const saveBtn = saveBox.querySelector('[data-act="save"]');
+  check("save button is hidden by default", saveBtn && getComputedStyle(saveBtn).display === "none");
+  withSave.applyOptions({ transcript: true });
+  check("it appears when the transcript feature is on", getComputedStyle(saveBtn).display !== "none");
+  saveBtn.click();
+  check("clicking it asks for a save", saves === 1);
+  withSave.applyOptions({ transcript: false });
+  check("and it goes away again when the feature is off", getComputedStyle(saveBtn).display === "none");
+
   Element.prototype.attachShadow = nativeAttachShadow;
   out.innerHTML += `\n${results.filter(Boolean).length}/${results.length} checks passed\n`;
   document.title = results.every(Boolean) ? "ALL PASS" : "FAILURES";

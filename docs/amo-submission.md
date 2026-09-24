@@ -170,6 +170,34 @@ session (your own video with captions running) is worth adding if you have one.
 
 ## 5. Release notes
 
+### 1.4.0
+
+```
+New, and off by default: save captions as a text file. Turn on Settings →
+Transcript and the add-on keeps each tab's caption lines in memory; "Save
+transcript" in the toolbar popup, or the ↓ button on the caption panel, writes
+them to your Downloads folder as a .txt file, one timed line per caption.
+Nothing is kept unless you turn this on, nothing is written until you click
+Save, and a tab's transcript is discarded when you close it or switch the
+feature off.
+```
+
+Reviewer notes for this version:
+
+```
+New optional permission: "downloads". It is declared under
+optional_permissions and requested with permissions.request() only when the
+user ticks Settings -> Transcript (extension/options/options.js); declining
+leaves the feature off. It is used for one call, downloads.download() on a
+blob: URL built in the background page from the tab's caption lines
+(extension/background/background.js, saveTranscript), triggered only by the
+user clicking Save. The text never leaves the machine and nothing is fetched.
+Transcripts live in memory only and are cleared on tab close, navigation, and
+when the setting is turned off (background.js, clearTranscripts). The
+privacy policy has been updated to describe this. No other change to
+permissions, network access or the vendored runtime.
+```
+
 ### 1.3.0
 
 ```

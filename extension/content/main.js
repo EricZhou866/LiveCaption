@@ -37,6 +37,7 @@
   const overlay = IS_TOP
     ? new LC.Overlay({
         onClose: () => send({ type: "set-mode", mode: "off" }),
+        onSave: () => send({ type: "save-transcript" }),
         onGeometry: (geo) => send({ type: "save-ui", ...geo }),
       })
     : null;
@@ -146,7 +147,9 @@
         state.source = msg.source || "media";
         tap.disabled = !enabled();
         tap.allowStreamClone = msg.settings.streamClone !== false;
-        if (overlay) overlay.applyOptions(msg.settings.ui || {});
+        if (overlay) {
+          overlay.applyOptions({ ...(msg.settings.ui || {}), transcript: !!msg.settings.transcript });
+        }
         if (!enabled()) {
           stopCapture();
           if (overlay) overlay.hide();

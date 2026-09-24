@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Local Live Captions",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Automatic on-screen English captions for any audio or video playing in a tab. Speech recognition runs locally in the browser.",
   "author": "EricZhou866",
   "homepage_url": "https://github.com/EricZhou866/LiveCaption",
@@ -15,6 +15,8 @@
   },
 
   "permissions": ["storage", "tabs"],
+
+  "optional_permissions": ["downloads"],
 
   "optional_host_permissions": ["<all_urls>"],
 
@@ -30,6 +32,7 @@
       "background/wav.js",
       "background/segmenter.js",
       "background/engine.js",
+      "background/transcript.js",
       "background/background.js"
     ]
   },

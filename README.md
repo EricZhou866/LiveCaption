@@ -93,6 +93,7 @@ requires because a minified dependency is vendored. Self-distribution instead:
 | CPU usage | How hard the recogniser is allowed to run: smoothest, balanced (default), or low (complete lines only). Partial updates are skipped while the tab is in the background whatever the setting. |
 | Language | Transcribe as spoken, or translate any language into English (needs a multilingual model). |
 | Panel | Font size, visible lines, opacity, theme, and how long the panel lingers after the last caption (0 = never hide). Position and size are remembered; both have reset buttons. |
+| Transcript | Off by default. Keeps each tab's caption lines in memory so *Save transcript* (popup or panel) can write them to a `.txt` file in Downloads. Discarded on tab close, navigation, or switching it off. Asks once for the optional `downloads` permission. |
 | Re-fetch uncapturable streams | On by default. Costs the stream's bandwidth twice, and is the only way to caption a player that loads its audio without CORS. |
 | Timing | Pause length that ends a caption line, partial-update interval, and speech sensitivity. |
 | Engine | Local, or an OpenAI-compatible `POST /v1/audio/transcriptions` endpoint (e.g. a local `whisper.cpp` server). |
@@ -189,6 +190,15 @@ since content scripts only inject on page load.
 - DRM (Widevine) playback cannot be captured at all.
 
 ## Release notes
+
+### 1.4.0
+
+- **Save captions as a text file** (Settings → Transcript, off by default). When on, a
+  tab's caption lines are kept in memory and *Save transcript* — in the toolbar popup or
+  as the ↓ button on the caption panel — writes them to Downloads as a `.txt` file, one
+  line per caption with its time. Only committed lines are kept, never the partial ones.
+- Uses the new optional `downloads` permission, requested at the moment you switch the
+  feature on; nobody who leaves it off is asked for anything.
 
 ### 1.3.0 — on AMO
 
