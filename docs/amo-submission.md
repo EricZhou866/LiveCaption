@@ -170,6 +170,19 @@ session (your own video with captions running) is worth adding if you have one.
 
 ## 5. Release notes
 
+### 1.4.1
+
+```
+Fixes captions stopping for good after you change the speech model or any other
+engine setting while something is being captioned. Also: a stalled recogniser
+now restarts itself instead of freezing captions, and if WebGPU is unavailable
+or stalls, captioning carries on on the CPU and the panel tells you.
+```
+
+Reviewer notes for this version: no change to permissions, network access or the
+vendored runtime. The recogniser is restarted more defensively, and the WebGPU
+option now checks for an adapter before loading.
+
 ### 1.4.0
 
 ```

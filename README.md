@@ -191,6 +191,20 @@ since content scripts only inject on page load.
 
 ## Release notes
 
+### 1.4.1
+
+- **Fixed: captions stopped for good after changing the model** (present since 1.0.0).
+  Changing any engine setting restarts the recogniser, and the restart discarded the
+  request in flight without ever settling it; every later caption — committed lines
+  included — was queued behind it for ever. A restart now fails everything that was
+  waiting, so the queue drains and the new model takes over.
+- A decode that never answers (a stalled GPU, a wedged worker) no longer freezes
+  captions: every request to the recogniser has a watchdog, and a stalled one throws the
+  worker away and starts clean.
+- WebGPU: precision is picked for the GPU (full-precision encoder, 4-bit decoder) instead
+  of passing it an 8-bit model it cannot run, and if WebGPU is missing or stalls the
+  phrase is redone on the CPU, the panel says so once, and the CPU is used from then on.
+
 ### 1.4.0
 
 - **Save captions as a text file** (Settings → Transcript, off by default). When on, a

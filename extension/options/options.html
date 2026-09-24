@@ -46,7 +46,7 @@
     <label class="field">
       <span>Engine</span>
       <select id="engine">
-        <option value="local">Local (in-browser Whisper)</option>
+        <option value="local">Local (in the browser — Moonshine or Whisper)</option>
         <option value="remote">Remote endpoint (OpenAI-compatible)</option>
       </select>
     </label>
@@ -81,9 +81,13 @@
         <span>Compute</span>
         <select id="device">
           <option value="wasm">CPU (WebAssembly) — works everywhere</option>
-          <option value="webgpu">WebGPU — faster, needs a WebGPU-enabled Firefox build</option>
+          <option value="webgpu">WebGPU — faster where available, falls back to the CPU by itself</option>
         </select>
       </label>
+      <p class="hint">On WebGPU the precision above is chosen for you (a full-precision encoder
+        and a 4-bit decoder), because the GPU backend cannot run 8-bit models. If WebGPU is
+        missing in your Firefox or stalls on a model, captions carry on on the CPU and the panel
+        says so; changing any engine setting gives WebGPU another try.</p>
       <label class="field">
         <span>CPU usage</span>
         <select id="cpu">
