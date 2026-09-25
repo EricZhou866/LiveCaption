@@ -10,9 +10,10 @@
     "start": "npm run vendor && web-ext run --source-dir extension --browser-console",
     "lint": "web-ext lint --source-dir extension",
     "testpage": "node scripts/testpage.mjs",
-    "source": "git archive --format=zip -o web-ext-artifacts/source-$npm_package_version.zip HEAD",
+    "source": "node scripts/source-archive.mjs",
     "sign": "npm run vendor && web-ext sign --source-dir extension --channel unlisted",
-    "test": "node test/throttle.test.mjs && node test/settings.test.mjs && node test/engine.test.mjs && node test/transcript.test.mjs && node test/timeline.test.mjs"
+    "test": "node test/throttle.test.mjs && node test/settings.test.mjs && node test/engine.test.mjs && node test/transcript.test.mjs && node test/timeline.test.mjs",
+    "publish:amo": "npm test && npm run build && npm run source && web-ext sign --source-dir extension --channel listed --upload-source-code web-ext-artifacts/source-$npm_package_version.zip --amo-metadata docs/amo/$npm_package_version.json --approval-timeout 0"
   },
   "devDependencies": {
     "@huggingface/transformers": "^3.8.1",

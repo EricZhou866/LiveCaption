@@ -60,6 +60,10 @@ npm run build           # -> web-ext-artifacts/local-live-captions-<version>.xpi
 npm run source          # -> web-ext-artifacts/source-<version>.zip, required by AMO
 ```
 
+To publish a new version to the listing in one go — tests, package, source archive, reviewer
+notes and release notes from `docs/amo/<version>.json` — commit first, then run
+`npm run publish:amo` with `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` set in the shell.
+
 [docs/amo-submission.md](docs/amo-submission.md) has the full submission checklist
 (step-by-step Chinese version: [docs/amo-submission.zh.md](docs/amo-submission.zh.md)):
 listing copy, permission justifications, reviewer notes, and the build instructions AMO

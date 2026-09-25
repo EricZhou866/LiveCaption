@@ -165,13 +165,25 @@ First release.
 
 ## 第 10 步：之后的维护
 
-**发新版本：**
+**发新版本（推荐：一条命令）：**
+
+1. 改代码，两处版本号一起改（`extension/manifest.json` 和 `package.json`），写好
+   `docs/amo/<版本号>.json`（审核员备注 + 中英文版本说明），然后**先提交**。
+2. 在终端里设置凭据（只存在于这个终端会话，不写进任何文件），再发布：
 
 ```bash
-# 改代码，然后两处版本号一起改：extension/manifest.json 和 package.json
-npm test                  # 回归：节流逻辑 + 真实音频时间线
-npm run build && npm run source
+export WEB_EXT_API_KEY=你的JWT_issuer WEB_EXT_API_SECRET=你的JWT_secret
 ```
+
+```bash
+npm run publish:amo
+```
+
+它依次做：跑测试 → 打包 → 生成源码包 → 上传插件、源码包、审核员备注和版本说明。
+源码包脚本会**拒绝**在有未提交改动、或已提交的版本号与要发布的不一致时运行——
+之前就因为先打包后提交，导致源码包比插件落后一个版本。
+
+3. **隐私政策改了的话**，还要到开发者后台手动更新商店页面的隐私政策栏（API 改不了它）。
 
 1.4.2 的版本说明（Release Notes）可以直接用：
 
