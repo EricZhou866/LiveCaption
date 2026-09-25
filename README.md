@@ -64,10 +64,12 @@ To publish a new version to the listing in one go — tests, package, source arc
 notes and release notes from `docs/amo/<version>.json` — commit first, then run
 `npm run publish:amo` with `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` set in the shell.
 
-The store page's name, summary, description, tags and donation link are not part of a
-version: they live in `docs/amo/listing-{summary,description}.txt` (and `.zh-CN.txt`) and
-`docs/amo/listing-meta.json`, and `npm run listing:amo` sends them with the same
-credentials — no review, no Developer Hub. The store name is deliberately longer than the
+The store page's name, summary, description, tags, donation link and privacy policy are not
+part of a version: they live in `docs/amo/listing-{summary,description}.txt` (and
+`.zh-CN.txt`), `docs/amo/listing-meta.json` and `PRIVACY.md`, and `npm run listing:amo`
+sends them with the same credentials — no review, no Developer Hub. It regenerates
+`docs/amo/privacy-policy.txt` from `PRIVACY.md` first, so the store's policy can't drift
+from the repository's. The store name is deliberately longer than the
 manifest's (`Local Live Captions – Offline AI Subtitles` against `Local Live Captions`): AMO
 only reads the manifest name when an add-on is first created, so later versions leave the
 listing name alone, and the browser's own UI keeps the short one. Tags must come from AMO's

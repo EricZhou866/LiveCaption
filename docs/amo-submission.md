@@ -127,10 +127,10 @@ Open Collective, Patreon, Flattr, micropayment.de, donate.mozilla.org).
 
 **Categories:** Language Support and Photos, Music & Videos. AMO has no Accessibility
 category for extensions (the full list is at /api/v5/addons/categories/).
-**Tags:** captions, subtitles, accessibility, speech recognition, whisper, offline
+**Tags:** from AMO's fixed list only — see `docs/amo/listing-meta.json`
 **Support site:** https://github.com/EricZhou866/LiveCaption
 **Support email:** EricZhou866@gmail.com
-**Privacy policy:** paste `PRIVACY.md`
+**Privacy policy:** `PRIVACY.md`, sent as plain text by `npm run listing:amo`
 **License:** MIT
 
 **Data collection disclosure:** "No data collected" — matches

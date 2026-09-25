@@ -113,7 +113,7 @@ First release.
 | **Support Email** | `EricZhou866@gmail.com` |
 | **Support Site** | `https://github.com/EricZhou866/LiveCaption` |
 | **License** | MIT |
-| **Privacy Policy** | 勾上「有隐私政策」，把 [PRIVACY.md](../PRIVACY.md) 全文粘进去 |
+| **Privacy Policy** | `npm run listing:amo` 会把 [PRIVACY.md](../PRIVACY.md) 转成纯文本发到商店，不用手动粘贴 |
 | **This add-on is experimental** | 不勾 —— 功能是完整的 |
 
 想同时上中文描述：保存后在同一页面切换语言（Locale）下拉，选「中文（简体）」，

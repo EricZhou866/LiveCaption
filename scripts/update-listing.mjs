@@ -1,5 +1,6 @@
 /* Updates the AMO listing — name, summary, description, tags and donation link —
- * from docs/amo/listing-*.txt and docs/amo/listing-meta.json.
+ * from docs/amo/listing-*.txt and docs/amo/listing-meta.json, and the privacy
+ * policy from docs/amo/privacy-policy.txt (regenerated from PRIVACY.md first).
  *
  *   npm run listing:amo -- --dry-run   # show what would be sent, no credentials needed
  *   npm run listing:amo                # send it (needs WEB_EXT_API_KEY / WEB_EXT_API_SECRET)
@@ -84,6 +85,12 @@ async function main() {
     }
   }
   if (!payload.contributions_url) console.log("  contributions_url (not set in listing-meta.json — skipped)");
+
+  // The privacy policy lives on its own endpoint. English only: PRIVACY.md is
+  // the one source, and a translation would be a second policy to keep true.
+  const privacy = read("privacy-policy.txt");
+  const policy = { privacy_policy: { [locale]: privacy } };
+  console.log(`  privacy_policy ${locale.padEnd(5)} ${String([...privacy].length).padStart(4)} chars  "${privacy.split("\n").find((l) => l.startsWith("Last updated"))}"`);
   if (dryRun) {
     console.log("dry run: nothing sent");
     return;
@@ -95,19 +102,25 @@ async function main() {
     console.error("WEB_EXT_API_KEY and WEB_EXT_API_SECRET must be set in this shell (the same ones npm run publish:amo uses).");
     process.exit(1);
   }
-  const res = await fetch(`${API}${listing.id}/`, {
-    method: "PATCH",
-    headers: { Authorization: `JWT ${amoJwt(key, secret)}`, "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    console.error(`AMO refused the update: HTTP ${res.status}\n${text.slice(0, 600)}`);
-    process.exit(1);
-  }
-  const updated = JSON.parse(text);
+  // A fresh token per request: each one carries its own jti.
+  const patch = async (path, body) => {
+    const res = await fetch(`${API}${listing.id}/${path}`, {
+      method: "PATCH",
+      headers: { Authorization: `JWT ${amoJwt(key, secret)}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      console.error(`AMO refused the update to ${path || "the listing"}: HTTP ${res.status}\n${text.slice(0, 600)}`);
+      process.exit(1);
+    }
+    return JSON.parse(text);
+  };
+  const updated = await patch("", payload);
+  const updatedPolicy = await patch("eula_policy/", policy);
   const pick = (f) => (f && (f[locale] || Object.values(f)[0])) || "";
-  console.log(`updated.\n  name: ${pick(updated.name)}\n  tags: ${(updated.tags || []).join(", ")}\n  donation link: ${updated.contributions_url || "(none)"}`);
+  const policyDate = (pick(updatedPolicy.privacy_policy).match(/Last updated: [^\n]+/) || ["(no date)"])[0];
+  console.log(`updated.\n  name: ${pick(updated.name)}\n  tags: ${(updated.tags || []).join(", ")}\n  donation link: ${updated.contributions_url || "(none)"}\n  privacy policy: ${policyDate}`);
   console.log(`check: https://addons.mozilla.org/firefox/addon/${listing.slug}/`);
 }
 
