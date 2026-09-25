@@ -1,0 +1,40 @@
+PRIVACY POLICY — LOCAL LIVE CAPTIONS
+
+Last updated: 2026-09-25
+
+Local Live Captions does not collect, transmit, or sell any personal data. There is no analytics, no telemetry, and no account.
+
+WHAT THE ADD-ON PROCESSES
+
+- Audio from the tab or your microphone. It is read only while captions are on, converted to 16 kHz mono in memory, transcribed, and discarded. It is never written to disk and never sent anywhere in the default (local) mode.
+- Captions. Shown on screen only. By default they are not stored, logged, or uploaded, and are discarded when the panel closes.
+- Transcripts — only if you turn them on. The Transcript setting is off by default. When you switch it on, the caption lines of each tab are kept in memory so that you can save them. They are written to disk only when you click Save transcript, and only to a .txt file in your own Downloads folder. A tab's transcript is discarded when the tab is closed or loads another page, and every transcript is discarded the moment you switch the setting off. Transcripts are never uploaded anywhere.
+- Your settings (model, appearance, panel position and size, timing). Stored locally with the browser's extension storage. They never leave your computer.
+
+NETWORK CONNECTIONS
+
+When: First use of a speech model, once per model
+Where: huggingface.co and its CDN
+What is sent: A normal file download of the model weights and its tokenizer — data files, not program code. No audio, no page data, no identifiers beyond what any HTTPS request includes.
+
+When: When a page's own player cannot be captured — it loads its audio without asking for CORS, as many radio players do — and Caption streams the page won't let us capture is on (the default)
+Where: The same media URL the page is already playing, on that site's own server
+What is sent: An ordinary request for that media, made from the page, exactly like the one its player made. Nothing of yours is sent: no audio, no captions, no identifiers. The response is read only to produce captions and is never played. It doubles that stream's bandwidth; turn the setting off to stop it.
+
+When: Only if you explicitly configure a remote endpoint in Settings
+Where: The URL you enter
+What is sent: 16 kHz WAV audio segments and, if you set one, your API key. This is off by default; in local mode it never happens.
+
+No other connections are made. The add-on does not talk to any server operated by the developer, because there isn't one.
+
+PERMISSIONS
+
+- Access to the sites you visit — required to read the audio of pages you play media on and to draw the caption panel there. Firefox asks you to grant this explicitly, and you can grant it per site.
+- Microphone — only when you switch the audio source to Microphone; Firefox asks each site for permission in the usual way.
+- Storage — your settings.
+- Downloads (optional) — requested only when you switch on transcripts, and used only to save the transcript file you ask for.
+- Tabs — to know which tab is playing and to keep captions per tab.
+
+CONTACT
+
+Questions or reports: open an issue at https://github.com/EricZhou866/LiveCaption/issues

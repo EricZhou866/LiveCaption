@@ -1,6 +1,6 @@
 # Privacy Policy — Local Live Captions
 
-_Last updated: 2026-09-24_
+_Last updated: 2026-09-25_
 
 Local Live Captions does not collect, transmit, or sell any personal data. There is no
 analytics, no telemetry, and no account.
@@ -26,6 +26,7 @@ analytics, no telemetry, and no account.
 | When | Where | What is sent |
 | --- | --- | --- |
 | First use of a speech model, once per model | `huggingface.co` and its CDN | A normal file download of the model weights and its tokenizer — data files, not program code. No audio, no page data, no identifiers beyond what any HTTPS request includes. |
+| When a page's own player cannot be captured — it loads its audio without asking for CORS, as many radio players do — and *Caption streams the page won't let us capture* is on (the default) | The same media URL the page is already playing, on that site's own server | An ordinary request for that media, made from the page, exactly like the one its player made. Nothing of yours is sent: no audio, no captions, no identifiers. The response is read only to produce captions and is never played. It doubles that stream's bandwidth; turn the setting off to stop it. |
 | Only if you explicitly configure a remote endpoint in Settings | The URL **you** enter | 16 kHz WAV audio segments and, if you set one, your API key. This is off by default; in local mode it never happens. |
 
 No other connections are made. The add-on does not talk to any server operated by the
