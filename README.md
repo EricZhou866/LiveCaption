@@ -196,17 +196,20 @@ since content scripts only inject on page load.
 
 ## Release notes
 
-### 1.4.3
+Dates are as shown in the AMO Developer Hub, which uses UTC.
+
+### 1.4.3 — submitted to AMO on 2026-09-25, awaiting review
 
 - New icon: a sound wave above the caption line it becomes. Shipped as PNG at every size
   instead of one SVG — AMO's store page had not picked the SVG up and showed its default
   puzzle piece — with a separately drawn, pixel-aligned 16 px version so the bars stay
   distinct in the toolbar instead of blurring together.
+- The store page's own icon is set separately in the Developer Hub (Edit Product Page);
+  `docs/listing/icon-128.png` is the file for it.
 
-### 1.4.2 — submitted to AMO on 2026-09-24, awaiting review
+### 1.4.2 — listed on AMO since 2026-09-25
 
-The first listed version to carry 1.4.0 and 1.4.1 below; 1.3.0 stays live until it is
-approved.
+The first listed version to carry 1.4.0 and 1.4.1 below.
 
 - **Use recommended settings**: one click at the top of the engine settings restores the
   fastest, most dependable combination — moonshine-tiny, int8, CPU (WebAssembly),
@@ -243,7 +246,7 @@ approved.
 - Uses the new optional `downloads` permission, requested at the moment you switch the
   feature on; nobody who leaves it off is asked for anything.
 
-### 1.3.0 — listed on AMO since 2026-09-17
+### 1.3.0 — listed on AMO 2026-09-17 to 2026-09-25
 
 - **Radio and news players work now.** Players that load their stream with
   `new Audio(url)` and no `crossorigin` attribute hand the browser tainted audio, so
