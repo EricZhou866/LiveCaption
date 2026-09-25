@@ -43,6 +43,15 @@
 
   <section class="card">
     <h2>Speech engine</h2>
+    <div class="recommended" id="recommendedBox">
+      <div>
+        <div id="recommendedState" class="rec-state"></div>
+        <p class="hint">moonshine-tiny · int8 · CPU (WebAssembly) · Balanced — the fastest
+          combination that works on every machine: about 0.3 s per caption update, from a
+          27 MB one-time download.</p>
+      </div>
+      <button id="useRecommended" class="primary">Use recommended settings</button>
+    </div>
     <label class="field">
       <span>Engine</span>
       <select id="engine">
@@ -56,8 +65,8 @@
         <span>Model</span>
         <select id="model">
           <optgroup label="Moonshine — English, built for live captioning">
-            <option value="onnx-community/moonshine-tiny-ONNX">moonshine-tiny — fastest by far (~27 MB)</option>
-            <option value="onnx-community/moonshine-base-ONNX">moonshine-base — more accurate, still fast (~60 MB)</option>
+            <option value="onnx-community/moonshine-tiny-ONNX">moonshine-tiny — fastest, recommended (~27 MB)</option>
+            <option value="onnx-community/moonshine-base-ONNX">moonshine-base — more accurate, about 2× slower (~60 MB)</option>
           </optgroup>
           <optgroup label="Whisper — slower, but multilingual">
             <option value="onnx-community/whisper-tiny.en">whisper-tiny.en — English (~40 MB)</option>
@@ -71,16 +80,16 @@
       <label class="field">
         <span>Precision</span>
         <select id="dtype">
-          <option value="q8">int8 — smallest download, fastest on CPU</option>
-          <option value="q4">int4 decoder — fastest, slightly less accurate</option>
-          <option value="fp16">fp16 — for WebGPU</option>
-          <option value="fp32">fp32 — highest quality, slow</option>
+          <option value="q8">int8 — recommended: smallest download, ~0.3 s per update</option>
+          <option value="fp32">fp32 — ~25% faster per update on the CPU, but a 4× larger download</option>
+          <option value="q4">int4 — slower than int8 on the CPU and twice the size</option>
+          <option value="fp16">fp16 — only useful with WebGPU</option>
         </select>
       </label>
       <label class="field">
         <span>Compute</span>
         <select id="device">
-          <option value="wasm">CPU (WebAssembly) — works everywhere</option>
+          <option value="wasm">CPU (WebAssembly) — recommended: works everywhere</option>
           <option value="webgpu">WebGPU — faster where available, falls back to the CPU by itself</option>
         </select>
       </label>
@@ -92,7 +101,7 @@
         <span>CPU usage</span>
         <select id="cpu">
           <option value="high">Smoothest — update the live line as often as possible</option>
-          <option value="balanced">Balanced — default</option>
+          <option value="balanced">Balanced — recommended</option>
           <option value="low">Low — only complete sentences, at pauses</option>
         </select>
       </label>

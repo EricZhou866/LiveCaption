@@ -87,8 +87,9 @@ requires because a minified dependency is vendored. Self-distribution instead:
 
 | Setting | Notes |
 | --- | --- |
+| Recommended settings | One button at the top of the engine settings puts model, precision, compute, CPU usage and timing back to the fastest combination that works on every machine — moonshine-tiny, int8, CPU, balanced — and leaves appearance, transcript and stream-fallback choices alone. |
 | Model | `moonshine-tiny` (default) and `moonshine-base` for English; Whisper `tiny`/`base`/`small` when you need another language or translation. |
-| Precision | `q8` is the default; `q4` is faster, `fp16`/`fp32` are for WebGPU. |
+| Precision | `int8` (recommended). Measured for moonshine-tiny on the CPU: int8 0.31 s per update from 27 MB; fp32 0.24 s but 104 MB and four times the memory; int4 0.51 s from 53 MB — slower *and* larger, so never worth it on the CPU. On WebGPU the precision is chosen automatically. |
 | Compute | CPU (WebAssembly) everywhere; WebGPU where your Firefox build supports it. |
 | CPU usage | How hard the recogniser is allowed to run: smoothest, balanced (default), or low (complete lines only). Partial updates are skipped while the tab is in the background whatever the setting. |
 | Language | Transcribe as spoken, or translate any language into English (needs a multilingual model). |
@@ -190,6 +191,16 @@ since content scripts only inject on page load.
 - DRM (Widevine) playback cannot be captured at all.
 
 ## Release notes
+
+### 1.4.2
+
+- **Use recommended settings**: one click at the top of the engine settings restores the
+  fastest, most dependable combination — moonshine-tiny, int8, CPU (WebAssembly),
+  Balanced, default timing — and shows when you are already on it. Appearance, the
+  transcript switch and the stream fallback are left as you set them.
+- The precision labels now match measurements. int4 was labelled "fastest"; on the CPU it
+  is the slowest option (0.51 s per update against 0.31 s for int8) and twice int8's
+  download.
 
 ### 1.4.1
 

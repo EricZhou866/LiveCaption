@@ -170,6 +170,19 @@ session (your own video with captions running) is worth adding if you have one.
 
 ## 5. Release notes
 
+### 1.4.2
+
+```
+New "Use recommended settings" button in Settings: one click restores the
+fastest, most dependable speech settings, and Settings shows when you are
+already using them. Your appearance and transcript choices are kept.
+Precision labels now reflect measured speed — int4 was wrongly described as
+the fastest option.
+```
+
+Reviewer notes for this version: settings page and labels only; no change to
+permissions, network access or the vendored runtime.
+
 ### 1.4.1
 
 ```

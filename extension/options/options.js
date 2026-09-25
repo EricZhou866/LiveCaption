@@ -2,6 +2,7 @@
 
 const el = (id) => document.getElementById(id);
 let settings = null;
+let recommended = null;
 let savedTimer = null;
 
 function flashSaved() {
@@ -13,6 +14,7 @@ function flashSaved() {
 async function save(patch) {
   const res = await browser.runtime.sendMessage({ type: "set-settings", patch });
   if (res && res.settings) settings = res.settings;
+  if (recommended) syncRecommended();
   flashSaved();
 }
 
@@ -44,6 +46,24 @@ function nest(path, value) {
 
 function describeHide(ms) {
   return ms > 0 ? ms / 1000 + " s" : "never hide";
+}
+
+function isRecommended(s) {
+  if (!recommended) return false;
+  return Object.keys(recommended).every((k) =>
+    k === "vad"
+      ? Object.keys(recommended.vad).every((v) => s.vad && s.vad[v] === recommended.vad[v])
+      : s[k] === recommended[k]
+  );
+}
+
+function syncRecommended() {
+  const ok = isRecommended(settings);
+  el("recommendedState").textContent = ok
+    ? "✓ You are using the recommended settings"
+    : "You have changed the engine settings";
+  el("recommendedState").className = "rec-state" + (ok ? " ok" : "");
+  el("useRecommended").hidden = ok;
 }
 
 function syncEngineVisibility() {
@@ -87,6 +107,7 @@ function render() {
   el("thresholdOut").textContent = settings.vad.threshold.toFixed(3);
 
   syncEngineVisibility();
+  syncRecommended();
 }
 
 document.getElementById("version").textContent = "v" + browser.runtime.getManifest().version;
@@ -94,6 +115,7 @@ document.getElementById("version").textContent = "v" + browser.runtime.getManife
 async function init() {
   const state = await browser.runtime.sendMessage({ type: "get-state" });
   settings = state.settings;
+  recommended = state.recommended;
   el("permissionCard").hidden = state.granted;
   el("modelStatus").textContent = state.modelReady ? "Model loaded and ready." : "";
   render();
@@ -138,6 +160,11 @@ async function init() {
   bindValue("threshold", "vad.threshold", Number, (v) => (el("thresholdOut").textContent = Number(v).toFixed(3)));
 
   el("resetPos").addEventListener("click", () => save({ ui: { position: null } }));
+
+  el("useRecommended").addEventListener("click", async () => {
+    await save(JSON.parse(JSON.stringify(recommended)));
+    render();
+  });
   el("resetSize").addEventListener("click", () => save({ ui: { size: null } }));
 
   el("download").addEventListener("click", async () => {

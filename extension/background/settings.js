@@ -41,6 +41,32 @@ var LCSettings = (function () {
     },
   };
 
+  /** The fastest combination that works on every machine. Measured through
+   * the add-on's own worker (single-threaded WebAssembly, 6-second phrase):
+   * moonshine-tiny int8 decodes in ~0.3 s from a 27 MB download. fp32 is ~25%
+   * faster per update but a 104 MB download and four times the memory; int4 is
+   * both slower and larger than int8 on the CPU; WebGPU is not available in
+   * every Firefox. Only speed/stability settings are covered — appearance,
+   * transcript and the stream fallback are the user's own choices. */
+  const RECOMMENDED = {
+    engine: "local",
+    model: DEFAULTS.model,
+    dtype: DEFAULTS.dtype,
+    device: DEFAULTS.device,
+    cpu: DEFAULTS.cpu,
+    task: DEFAULTS.task,
+    language: DEFAULTS.language,
+    vad: { ...DEFAULTS.vad },
+  };
+
+  function isRecommended(s) {
+    return Object.keys(RECOMMENDED).every((k) =>
+      k === "vad"
+        ? Object.keys(RECOMMENDED.vad).every((v) => s.vad && s.vad[v] === RECOMMENDED.vad[v])
+        : s[k] === RECOMMENDED[k]
+    );
+  }
+
   let cache = null;
   const listeners = new Set();
 
@@ -90,5 +116,5 @@ var LCSettings = (function () {
     }
   });
 
-  return { DEFAULTS, get, set, migrate, onChange: (fn) => listeners.add(fn) };
+  return { DEFAULTS, RECOMMENDED, isRecommended, get, set, migrate, onChange: (fn) => listeners.add(fn) };
 })();

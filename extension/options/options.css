@@ -50,3 +50,14 @@ pre#diagOut {
 }
 
 h1 #version { font: 400 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); margin-left: 8px; }
+
+.recommended {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 14px; margin: 0 0 14px; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--line);
+}
+.recommended .hint { margin: 4px 0 0; }
+.recommended button { flex: none; }
+.rec-state { font-weight: 600; }
+.rec-state.ok { color: #1f9d55; }
+@media (prefers-color-scheme: dark) { .rec-state.ok { color: #4ade80; } }

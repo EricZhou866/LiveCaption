@@ -375,6 +375,8 @@ browser.runtime.onMessage.addListener(async (msg, sender) => {
         source: session ? session.source : "media",
         active: session ? session.activeFrameId !== null : false,
         transcriptLines: session && session.transcript ? session.transcript.length : 0,
+        recommended: LCSettings.RECOMMENDED,
+        usingRecommended: LCSettings.isRecommended(settings),
         modelReady: !!(localEngine && localEngine.ready),
       };
     }

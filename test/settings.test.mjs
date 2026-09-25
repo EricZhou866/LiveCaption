@@ -53,5 +53,26 @@ S = await boot({ schema: 2, model: "onnx-community/whisper-tiny.en" });
 after = await S.migrate();
 eq("migration does not run twice", after.model, "onnx-community/whisper-tiny.en");
 
+/* --- recommended settings --- */
+S = await boot(null);
+const R = S.RECOMMENDED;
+eq("recommended model is moonshine-tiny", R.model, "onnx-community/moonshine-tiny-ONNX");
+eq("recommended precision is int8", R.dtype, "q8");
+eq("recommended compute is the CPU", R.device, "wasm");
+eq("recommended budget is balanced", R.cpu, "balanced");
+eq("a fresh install is on the recommended settings", S.isRecommended(await S.get()), true);
+
+// the configuration from the report
+let custom = await S.set({ model: "onnx-community/whisper-base.en", device: "webgpu",
+                           ui: { fontSize: 30 }, transcript: true, streamClone: false,
+                           vad: { interimMs: 600 } });
+eq("whisper-base.en on WebGPU is not the recommended set", S.isRecommended(custom), false);
+after = await S.set(JSON.parse(JSON.stringify(R)));
+eq("one click puts every speed setting back", S.isRecommended(after), true);
+eq("...including the timing", after.vad.interimMs, S.DEFAULTS.vad.interimMs);
+eq("...but keeps the user's own text size", after.ui.fontSize, 30);
+eq("...their transcript choice", after.transcript, true);
+eq("...and their stream-fallback choice", after.streamClone, false);
+
 console.log(failures ? `\n${failures} FAILED` : "\nall settings checks passed");
 process.exitCode = failures ? 1 : 0;
