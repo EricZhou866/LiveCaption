@@ -173,7 +173,12 @@ also a known-good page to test against, independent of any site:
 
 ```bash
 npm run testpage      # http://localhost:8777 — plain <audio>, Web Audio, new Audio(), replay
+                      # /fullscreen.html — the panel over fullscreen players (click "Run checks")
 ```
+
+The test page and `npm test` both need an English speech clip at `test/speech.wav`. It is
+not checked in; the first run speaks one with macOS `say`, or with `espeak-ng` elsewhere
+(`apt install espeak-ng`).
 
 Two things that are easy to miss with a temporary add-on: reload the add-on in
 `about:debugging` after `npm run vendor`, and reload any tab that was already open,
@@ -211,6 +216,35 @@ since content scripts only inject on page load.
 ## Release notes
 
 Dates are as shown in the AMO Developer Hub, which uses UTC.
+
+### Unreleased
+
+Fixes from a full test pass:
+
+- **Settings → "Show captions automatically"** did nothing: no code ever read it, so
+  unticking it still captioned every tab that played audio. With it off, a tab now
+  captions only when set to **On** in the toolbar popup, and the keyboard shortcut turns
+  captions on for such a tab instead of doing nothing on the first press.
+- The upgrade that moves users off the slow whisper-tiny.en default never ran for anyone
+  who had changed a setting in 1.0/1.1: their stored settings have no `schema` key, and
+  filling in defaults made them look already upgraded. The unit test missed it by storing
+  `schema: undefined`, which real storage never does.
+- Changing the pause length, update rate or speech threshold in Settings only took effect
+  after the page was reloaded; it now reaches tabs that are already captioning.
+- A remote transcription endpoint that never answered stopped captions for good. Requests
+  now give up after 30 s, as the local engine already did.
+- Audio from a page AudioContext below 16 kHz (8 kHz telephony audio, for one) was passed
+  through at its own rate, so the recogniser heard it at double speed. It is now
+  interpolated up to 16 kHz.
+- Clicking the caption panel's drag handle without moving it threw a TypeError in the
+  page's console.
+- Captions vanished when a page put a bare `<video>` — or an embedded player's `<iframe>`,
+  such as a YouTube embed — into fullscreen: the panel was appended inside it, and those
+  elements render nothing but their own content. It now goes into the browser's top layer
+  above them (a manual popover); a fullscreen `<div>` player still hosts it as before.
+- With automatic captions off, the popup said "Ready — waiting for audio" on a tab that
+  would never start by itself. It now says to choose On.
+- `npm test` now runs outside macOS: the speech clip it needs is generated with espeak-ng.
 
 ### Store listing — updated 2026-09-25
 

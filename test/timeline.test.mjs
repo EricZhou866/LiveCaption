@@ -1,6 +1,7 @@
 /* Drives the shipped segmenter + CPU-budget logic with the real test clip on a
  * virtual clock, and reports what the recogniser would actually have done. */
 import { readFileSync } from "node:fs";
+import { ensureSpeechWav } from "../scripts/speech-fixture.mjs";
 
 const noop = { addListener() {}, removeListener() {} };
 let store = {};
@@ -25,7 +26,7 @@ eval(sources + "\nglobalThis.__x = { interimAllowed, Segmenter, LCSettings };");
 const { interimAllowed, Segmenter, LCSettings } = globalThis.__x;
 
 /* --- real audio: test/speech.wav is 44.1 kHz 16-bit mono --- */
-const wav = readFileSync("test/speech.wav");
+const wav = readFileSync(ensureSpeechWav());
 const srcRate = wav.readUInt32LE(24);
 const pcm16 = new Int16Array(wav.buffer, wav.byteOffset + 44, (wav.length - 44) / 2);
 const ratio = srcRate / 16000;

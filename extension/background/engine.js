@@ -187,6 +187,7 @@ class RemoteEngine {
     this.queue = Promise.resolve();
     this.lastDecodeMs = 0;
     this.lastDecodeEndAt = 0;
+    this.timeoutMs = 30000;
   }
 
   async transcribe(samples, settings, { force = false } = {}) {
@@ -215,7 +216,14 @@ class RemoteEngine {
       const headers = {};
       if (cfg.apiKey) headers.Authorization = `Bearer ${cfg.apiKey}`;
 
-      const res = await fetch(cfg.url, { method: "POST", body: form, headers });
+      // A server that never answers must not hold the queue: every committed
+      // line behind it would wait forever, exactly as with a stalled worker.
+      const res = await fetch(cfg.url, {
+        method: "POST",
+        body: form,
+        headers,
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       return (data.text || "").trim();

@@ -49,6 +49,16 @@ S = await boot({ schema: undefined, model: "onnx-community/whisper-small" });
 after = await S.migrate();
 eq("a deliberate model choice is left alone", after.model, "onnx-community/whisper-small");
 
+// What 1.0/1.1 really left in storage: no schema key at all, not an undefined one.
+S = await boot({ model: "onnx-community/whisper-tiny.en", ui: { fontSize: 28 } });
+after = await S.migrate();
+eq("a stored object without a schema key is migrated too", after.model, "onnx-community/moonshine-tiny-ONNX");
+eq("...and marked as migrated", store.settings.schema, 2);
+
+S = await boot(null);
+after = await S.migrate();
+eq("a fresh install needs no migration", after.model, "onnx-community/moonshine-tiny-ONNX");
+
 S = await boot({ schema: 2, model: "onnx-community/whisper-tiny.en" });
 after = await S.migrate();
 eq("migration does not run twice", after.model, "onnx-community/whisper-tiny.en");

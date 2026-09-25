@@ -445,7 +445,10 @@ browser.commands.onCommand.addListener(async (command) => {
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
   const session = getSession(tab.id);
-  const next = session.mode === "off" ? "on" : "off";
+  const settings = await LCSettings.get();
+  // With auto-start off, "auto" shows nothing, so the shortcut should turn captions on.
+  const showing = session.mode === "on" || (session.mode === "auto" && settings.autoStart !== false);
+  const next = showing ? "off" : "on";
   session.mode = next;
   if (next === "off") {
     endCapture(session, true);
@@ -473,6 +476,14 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
 LCSettings.onChange((s) => {
   DEBUG = s.debug;
   if (!s.transcript) clearTranscripts();
+  // A segmenter keeps the VAD settings it was built with; rebuild it so a
+  // change made in Settings reaches tabs that are already captioning.
+  const vad = JSON.stringify(s.vad);
+  for (const session of sessions.values()) {
+    if (!session.segmenter || JSON.stringify(session.segmenter.vad) === vad) continue;
+    session.segmenter.flush();
+    session.segmenter = null;
+  }
   for (const tabId of sessions.keys()) pushConfig(tabId);
 });
 

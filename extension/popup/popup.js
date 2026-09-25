@@ -22,7 +22,9 @@ async function refresh() {
 
   el("modeHint").textContent =
     state.mode === "auto"
-      ? "Auto shows captions whenever this tab plays audio."
+      ? state.settings.autoStart === false
+        ? "Automatic captions are off in Settings — choose On to caption this tab."
+        : "Auto shows captions whenever this tab plays audio."
       : state.mode === "on"
       ? "Captions stay on for this tab."
       : "Captions are off for this tab.";
@@ -44,6 +46,9 @@ async function refresh() {
   const dot = el("dot");
   if (state.mode === "off") { dot.className = "dot"; el("status").textContent = "Off for this tab"; }
   else if (state.active) { dot.className = "dot on"; el("status").textContent = "Captioning this tab"; }
+  else if (state.mode === "auto" && state.settings.autoStart === false) {
+    dot.className = "dot"; el("status").textContent = "Not captioning — choose On above";
+  }
   else if (state.modelReady) { dot.className = "dot on"; el("status").textContent = "Ready — waiting for audio"; }
   else { dot.className = "dot busy"; el("status").textContent = "Model loads on first audio"; }
 }

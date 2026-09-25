@@ -101,8 +101,12 @@ var LCSettings = (function () {
    * which is the slow one — the reason Firefox flagged the add-on. Move them
    * across on upgrade, and leave a deliberate choice alone. */
   async function migrate() {
+    // Read the raw stored object: get() merges DEFAULTS in, and DEFAULTS
+    // already carries the current schema, so a 1.0/1.1 object — which has no
+    // schema key at all — would look up to date and never be migrated.
+    const stored = (await browser.storage.local.get("settings")).settings;
     const current = await get();
-    if (current.schema >= SCHEMA) return current;
+    if (!stored || stored.schema >= SCHEMA) return current;
     const patch = { schema: SCHEMA };
     if (current.model === "onnx-community/whisper-tiny.en") patch.model = DEFAULTS.model;
     return set(patch);

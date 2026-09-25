@@ -63,6 +63,9 @@ button[hidden] { display: none; } /* all:unset above would otherwise override [h
 .status:empty { display: none; }
 `;
 
+  // Replaced elements: fullscreen shows their own content, never their children.
+  const CANNOT_HOLD = /^(video|audio|img|canvas|iframe|embed|object)$/;
+
   LC.Overlay = class Overlay {
     constructor({ onClose, onGeometry, onSave } = {}) {
       this.onClose = onClose || (() => {});
@@ -121,13 +124,15 @@ button[hidden] { display: none; } /* all:unset above would otherwise override [h
       this.initDrag();
       this.initResize();
       this.initFullscreen();
+      this.fsHandler(); // the first caption can arrive while something is already fullscreen
       this.applyOptions(this.opts);
     }
 
     initDrag() {
       const grip = this.box.querySelector(".grip");
-      let startX = 0, startY = 0, originLeft = 0, originTop = 0;
+      let startX = 0, startY = 0, originLeft = 0, originTop = 0, moved = false;
       const move = (e) => {
+        moved = true;
         const left = originLeft + (e.clientX - startX);
         const top = originTop + (e.clientY - startY);
         const maxLeft = window.innerWidth - this.box.offsetWidth;
@@ -138,13 +143,16 @@ button[hidden] { display: none; } /* all:unset above would otherwise override [h
         this.box.classList.remove("dragging");
         window.removeEventListener("pointermove", move, true);
         window.removeEventListener("pointerup", up, true);
-        this.onGeometry({ left: this.pos.left, top: this.pos.top });
+        // A plain click on the grip moves nothing, and before the first drag
+        // there is no position at all to save.
+        if (moved && this.pos) this.onGeometry({ left: this.pos.left, top: this.pos.top });
       };
       grip.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         const rect = this.box.getBoundingClientRect();
         startX = e.clientX; startY = e.clientY;
         originLeft = rect.left; originTop = rect.top;
+        moved = false;
         this.box.classList.add("dragging");
         window.addEventListener("pointermove", move, true);
         window.addEventListener("pointerup", up, true);
@@ -174,11 +182,32 @@ button[hidden] { display: none; } /* all:unset above would otherwise override [h
     /* Keep captions visible when a video goes fullscreen. */
     initFullscreen() {
       this.fsHandler = () => {
+        if (!this.host) return;
         const fs = document.fullscreenElement;
-        const parent = fs || document.body || document.documentElement;
-        if (this.host && this.host.parentElement !== parent) parent.appendChild(this.host);
+        // Only an ordinary element renders what is appended to it. A bare
+        // <video>, or an embedded player's <iframe>, shows its own content
+        // and nothing else, so the panel goes into the top layer above it.
+        const canHold = fs && !CANNOT_HOLD.test(fs.localName);
+        const parent = canHold ? fs : document.body || document.documentElement;
+        if (this.host.parentElement !== parent) parent.appendChild(this.host);
+        this.setTopLayer(!!fs && !canHold);
       };
       document.addEventListener("fullscreenchange", this.fsHandler, true);
+    }
+
+    /** A manual popover sits in the top layer, above whatever went fullscreen
+     * before it was shown. The host's inline `all:initial` overrides the UA's
+     * popover box styles, so the panel looks the same either way. */
+    setTopLayer(on) {
+      const host = this.host;
+      if (typeof host.showPopover !== "function") return;
+      if (host.hasAttribute("popover") && host.matches(":popover-open")) host.hidePopover();
+      if (on) {
+        host.setAttribute("popover", "manual");
+        host.showPopover(); // shown again so it lands above the newest fullscreen element
+      } else {
+        host.removeAttribute("popover");
+      }
     }
 
     setPosition(left, top) {
