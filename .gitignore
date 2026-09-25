@@ -5,3 +5,4 @@ extension/vendor/*
 .DS_Store
 test/speech.wav
 test/speech.aiff
+extension/.amo-upload-uuid

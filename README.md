@@ -196,7 +196,10 @@ since content scripts only inject on page load.
 
 ## Release notes
 
-### 1.4.2
+### 1.4.2 — submitted to AMO on 2026-09-24, awaiting review
+
+The first listed version to carry 1.4.0 and 1.4.1 below; 1.3.0 stays live until it is
+approved.
 
 - **Use recommended settings**: one click at the top of the engine settings restores the
   fastest, most dependable combination — moonshine-tiny, int8, CPU (WebAssembly),
@@ -205,8 +208,12 @@ since content scripts only inject on page load.
 - The precision labels now match measurements. int4 was labelled "fastest"; on the CPU it
   is the slowest option (0.51 s per update against 0.31 s for int8) and twice int8's
   download.
+- Release process: `npm run publish:amo` submits the package, source archive, reviewer
+  notes and release notes together. The source archive is taken from the committed tree
+  and now refuses to build when that is not the version being released — the archive sent
+  with 1.3.0 had been built from 1.2.1, which the 1.4.2 reviewer notes point out.
 
-### 1.4.1
+### 1.4.1 — not published separately; ships in 1.4.2
 
 - **Fixed: captions stopped for good after changing the model** (present since 1.0.0).
   Changing any engine setting restarts the recogniser, and the restart discarded the
@@ -220,7 +227,7 @@ since content scripts only inject on page load.
   of passing it an 8-bit model it cannot run, and if WebGPU is missing or stalls the
   phrase is redone on the CPU, the panel says so once, and the CPU is used from then on.
 
-### 1.4.0
+### 1.4.0 — not published separately; ships in 1.4.2
 
 - **Save captions as a text file** (Settings → Transcript, off by default). When on, a
   tab's caption lines are kept in memory and *Save transcript* — in the toolbar popup or
@@ -229,7 +236,7 @@ since content scripts only inject on page load.
 - Uses the new optional `downloads` permission, requested at the moment you switch the
   feature on; nobody who leaves it off is asked for anything.
 
-### 1.3.0 — on AMO
+### 1.3.0 — listed on AMO since 2026-09-17
 
 - **Radio and news players work now.** Players that load their stream with
   `new Audio(url)` and no `crossorigin` attribute hand the browser tainted audio, so
@@ -275,14 +282,13 @@ First release.
 
 ## Privacy
 
-The add-on stores only your settings. Audio is processed in memory and discarded; the
-only network traffic in local mode is the one-time model download from huggingface.co.
-Remote mode uploads 16 kHz WAV segments to the endpoint you configure, and nowhere else.
-
-## Privacy
-
-See [PRIVACY.md](PRIVACY.md). Short version: nothing is collected; the only network
-traffic in local mode is the one-time model download.
+See [PRIVACY.md](PRIVACY.md). In short: nothing is collected, and nothing is sent to the
+developer — there is no server. Audio is processed in memory and discarded. The add-on
+makes network requests only to download a speech model from huggingface.co (once per
+model), to re-read a page's own media URL when its player cannot be captured directly
+(Settings can turn this off), and — only if you configure one — to your own transcription
+endpoint. Transcripts are off by default; when on, they stay in memory until you save one
+to your Downloads folder.
 
 ## License
 
