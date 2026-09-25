@@ -64,6 +64,12 @@ To publish a new version to the listing in one go — tests, package, source arc
 notes and release notes from `docs/amo/<version>.json` — commit first, then run
 `npm run publish:amo` with `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` set in the shell.
 
+The store page's summary and description are not part of a version: they live in
+`docs/amo/listing-{summary,description}.txt` (and `.zh-CN.txt`), and
+`npm run listing:amo` sends them with the same credentials — no review, no Developer Hub.
+`npm run listing:amo -- --dry-run` shows what would be sent without them. The store icon is
+the one thing that still has to be uploaded by hand in the Developer Hub.
+
 [docs/amo-submission.md](docs/amo-submission.md) has the full submission checklist
 (step-by-step Chinese version: [docs/amo-submission.zh.md](docs/amo-submission.zh.md)):
 listing copy, permission justifications, reviewer notes, and the build instructions AMO
@@ -198,15 +204,32 @@ since content scripts only inject on page load.
 
 Dates are as shown in the AMO Developer Hub, which uses UTC.
 
+### Store listing — updated 2026-09-25
+
+Not a version of the add-on, but what people see before installing it:
+
+- The store page shows the new icon. It had shown AMO's default puzzle piece since the first
+  release, because the listing icon is set in the Developer Hub rather than read from the
+  manifest; `docs/listing/icon-128.png` was uploaded there.
+- Summary and description rewritten for the add-on as it is now. The page still carried the
+  1.0.0 text — Whisper as the engine, whisper-tiny.en as the fastest model, a 40 MB download,
+  cross-origin players that "cannot be tapped" — and said nothing of radio players,
+  transcripts or the recommended settings. The copy is also no longer hard-wrapped, which had
+  broken sentences mid-line on the page.
+- A Chinese (zh-CN) translation of the summary and description, where before Chinese
+  visitors fell back to English.
+- Both went out through the new `npm run listing:amo`, to the listing's default locale —
+  en-CA, not en-US — and zh-CN. Checked on the live page afterwards: none of the old claims
+  remain and no line breaks mid-sentence.
+
 ### 1.4.3 — listed on AMO since 2026-09-25
 
 - New icon: a sound wave above the caption line it becomes, as PNG at every size, with a
   separately drawn, pixel-aligned 16 px version so the bars stay distinct in the toolbar
   instead of blurring together.
-- The store page does **not** take its icon from the manifest. AMO keeps a listing icon of
-  its own, set in the Developer Hub, and shows a default puzzle piece until one is
-  uploaded — the public API still reported `addon-icons/default-64.png` with 1.4.3 live.
-  `docs/listing/icon-128.png` is the file to upload there.
+- The store page does **not** take its icon from the manifest: with 1.4.3 live, the public
+  API still reported AMO's default icon. The listing icon was uploaded separately — see
+  *Store listing* above.
 
 ### 1.4.2 — listed on AMO since 2026-09-25
 
