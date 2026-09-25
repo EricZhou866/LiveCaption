@@ -173,6 +173,7 @@ also a known-good page to test against, independent of any site:
 
 ```bash
 npm run testpage      # http://localhost:8777 — plain <audio>, Web Audio, new Audio(), replay
+                      # /fullscreen.html — the panel over fullscreen players (click "Run checks")
 ```
 
 The test page and `npm test` both need an English speech clip at `test/speech.wav`. It is
@@ -237,6 +238,12 @@ Fixes from a full test pass:
   interpolated up to 16 kHz.
 - Clicking the caption panel's drag handle without moving it threw a TypeError in the
   page's console.
+- Captions vanished when a page put a bare `<video>` — or an embedded player's `<iframe>`,
+  such as a YouTube embed — into fullscreen: the panel was appended inside it, and those
+  elements render nothing but their own content. It now goes into the browser's top layer
+  above them (a manual popover); a fullscreen `<div>` player still hosts it as before.
+- With automatic captions off, the popup said "Ready — waiting for audio" on a tab that
+  would never start by itself. It now says to choose On.
 - `npm test` now runs outside macOS: the speech clip it needs is generated with espeak-ng.
 
 ### Store listing — updated 2026-09-25

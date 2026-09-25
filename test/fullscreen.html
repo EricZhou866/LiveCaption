@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" /><title>Fullscreen harness</title>
+<style>body{font:14px/1.7 ui-monospace,monospace;background:#15151a;color:#e8e8ec;margin:0;padding:28px}
+.pass{color:#6ee7a0}.fail{color:#ff7a7a}h1{font:600 16px system-ui}
+#player{width:480px;height:270px;background:#333}video{width:480px;height:270px;background:#000}</style></head>
+<body>
+<h1>Fullscreen harness — the caption panel must stay on top of whatever goes fullscreen</h1>
+<p>Fullscreen needs a click: <button id="run">Run checks</button></p>
+<div id="player"></div>
+<video id="bare"></video>
+<pre id="out"></pre>
+<script src="/ext/content/shared.js"></script>
+<script src="/ext/content/overlay.js"></script>
+<script>
+const out = document.getElementById("out");
+const results = [];
+const check = (name, ok, detail) => {
+  results.push(ok);
+  out.innerHTML += `<span class="${ok ? "pass" : "fail"}">${ok ? "PASS" : "FAIL"}</span> ${name}${detail ? " — " + detail : ""}\n`;
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const nativeAttachShadow = Element.prototype.attachShadow;
+Element.prototype.attachShadow = function (init) {
+  return nativeAttachShadow.call(this, { ...init, mode: "open" });
+};
+
+const saved = [];
+const errors = [];
+window.addEventListener("error", (e) => errors.push(e.message));
+const overlay = new LiveCaption.Overlay({ onGeometry: (g) => saved.push(g) });
+overlay.show();
+overlay.pushFinal("a caption that must stay visible");
+const host = document.querySelector("[data-live-caption]");
+const box = host.shadowRoot.querySelector(".box");
+
+/** Is the panel what is actually painted at its own centre? */
+const onTop = () => {
+  const r = box.getBoundingClientRect();
+  return r.width > 0 && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === host;
+};
+
+// A plain click on the drag handle, before anything was ever dragged.
+const grip = box.querySelector(".grip");
+const r = grip.getBoundingClientRect();
+const at = { clientX: r.left + 5, clientY: r.top + 5, bubbles: true, composed: true };
+grip.dispatchEvent(new PointerEvent("pointerdown", at));
+window.dispatchEvent(new PointerEvent("pointerup", at));
+check("clicking the drag handle without moving throws nothing", errors.length === 0, errors.join("; "));
+check("...and saves no position", saved.length === 0, JSON.stringify(saved));
+
+document.getElementById("run").addEventListener("click", async () => {
+  check("panel is on top before fullscreen", onTop());
+
+  await document.getElementById("player").requestFullscreen();
+  await sleep(300);
+  check("fullscreen &lt;div&gt; player: the panel moves inside it", host.parentElement === document.fullscreenElement);
+  check("...and is visible on top", onTop());
+  await document.exitFullscreen();
+  await sleep(300);
+
+  await document.getElementById("bare").requestFullscreen();
+  await sleep(300);
+  check("fullscreen bare &lt;video&gt;: the panel goes to the top layer", host.matches(":popover-open"));
+  // Painting is what matters here: headless Chromium hit-tests straight
+  // through any popover to the fullscreen element, so onTop() cannot tell.
+  const rect = box.getBoundingClientRect();
+  check("...and lays out on screen", rect.width > 0 && rect.bottom <= innerHeight, `${Math.round(rect.width)}x${Math.round(rect.height)}`);
+  await document.exitFullscreen();
+  await sleep(300);
+  check("after fullscreen the panel is back in the page", host.parentElement === document.body && !host.hasAttribute("popover"));
+  check("...and still on top", onTop());
+
+  Element.prototype.attachShadow = nativeAttachShadow;
+  out.innerHTML += `\n${results.filter(Boolean).length}/${results.length} checks passed\n`;
+  document.title = results.every(Boolean) ? "ALL PASS" : "FAILURES";
+});
+</script>
+</body></html>
