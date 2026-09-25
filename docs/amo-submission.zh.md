@@ -106,9 +106,9 @@ First release.
 |---|---|
 | **Name** | `Local Live Captions` |
 | **Add-on URL (slug)** | `local-live-captions` |
-| **Summary** | 复制 amo-submission.md 第 4 节的 Summary（≤250 字符） |
-| **Description** | 复制第 4 节的 Description |
-| **Categories** | 主分类 **Accessibility**；副分类 Photos, Music & Videos |
+| **Summary** | 复制 `docs/amo/listing-summary.txt` |
+| **Description** | 复制 `docs/amo/listing-description.txt` |
+| **Categories** | **Language Support** 和 **Photos, Music & Videos**（AMO 没有 Accessibility 分类） |
 | **Tags** | captions, subtitles, accessibility, speech recognition, whisper, offline |
 | **Support Email** | `EricZhou866@gmail.com` |
 | **Support Site** | `https://github.com/EricZhou866/LiveCaption` |
@@ -277,34 +277,7 @@ CPU 占用大幅下降。识别默认改用 Moonshine——它的计算量随音
 
 ## 中文本地化文案
 
-**摘要（Summary）：**
+中文摘要和描述在 `docs/amo/listing-summary.zh-CN.txt` 和 `docs/amo/listing-description.zh-CN.txt`。
+保存英文版后，在同一页面把语言（Locale）切换到「中文（简体）」再粘贴。
 
-```
-给标签页里的任何声音加英文实时字幕——视频、播客、会议、直播。语音识别用 Whisper 在你自己的
-浏览器里本地完成，音频不会离开你的电脑。
-```
-
-**描述（Description）：**
-
-```
-Local Live Captions 会在正在播放的标签页上叠加一个字幕面板，就像 Chrome 的 Live Caption
-那样——区别是语音识别完全跑在你自己的机器上，用编译成 WebAssembly 的 Whisper 模型，在
-Firefox 内部完成。
-
-• 标签页一开始出声，字幕自动出现
-• 全部本地：模型一次性下载完成后即可离线使用，音频不会被上传
-• 支持普通的 <video>/<audio> 播放器、用 Web Audio 播放的站点，以及麦克风输入
-  （用于通话，或 Firefox 抓不到音频的站点）
-• 面板可拖动、可缩放、可调字号，深浅两种配色
-• 精度与速度可选：Moonshine 最快，需要其他语言时可切换到 Whisper；支持 WebGPU 的版本可以开启
-• 可用多语言模型把其他语言翻译成英文
-• 也可以改用你自己的转写服务（OpenAI 兼容接口）
-
-快捷键：Ctrl+Shift+L（macOS 为 Cmd+Shift+L）开关当前标签页的字幕。
-
-首次运行会下载语音模型（默认约 40 MB）。Firefox 会要求你授予站点访问权限后，插件才能读取
-页面音频。
-
-已知限制：跨域且未带 CORS 头的媒体无法捕获（这种情况请用麦克风模式）；DRM 视频完全无法捕获；
-字幕延迟大致等于当前这句话的长度。
-```
+这些文件都**不做手动换行**：AMO 会原样保留换行，按固定宽度折行的文字会在句子中间断开。

@@ -1,0 +1,17 @@
+Local Live Captions puts a caption panel over whatever is playing in a tab, the way Chrome's Live Caption does — except the speech recognition runs on your own machine, inside Firefox.
+
+• Captions appear on their own as soon as a tab starts playing audio
+• Everything is local: after a one-time 27 MB model download the add-on works offline, and your audio is never uploaded
+• Works with ordinary video and audio players, with sites that play through the Web Audio API, and with radio and news players that other capture methods only hear as silence
+• Light on the CPU: the default Moonshine model updates the caption line in about a third of a second
+• Drag the panel anywhere, resize it, change the text size, pick dark or light
+• Optional, off by default: keep a transcript of each tab and save it as a text file
+• Whisper models for other languages, including translation into English; WebGPU where your Firefox supports it
+• A microphone source for calls or anything Firefox cannot capture, and an optional OpenAI-compatible transcription server
+• "Use recommended settings" restores the fastest, most dependable setup in one click
+
+Keyboard shortcut: Ctrl+Shift+L (Cmd+Shift+L on macOS) toggles captions for the current tab.
+
+Firefox asks you to grant site access before the add-on can read a page's audio.
+
+Known limits: DRM-protected video cannot be captured, nor can a stream whose server refuses cross-origin access (microphone mode still works there); captions lag by about the length of the phrase being spoken.

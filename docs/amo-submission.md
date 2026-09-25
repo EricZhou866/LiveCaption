@@ -108,43 +108,19 @@ How to test quickly
 
 **Name:** Local Live Captions
 
-**Summary** (250 char max):
+**Summary** (250 char max) and **Description** live in `docs/amo/`, one file each, with no
+hard line breaks — AMO keeps newlines, so wrapped text shows up broken mid-sentence:
 
-```
-Live English captions for any audio or video in a tab — video, podcasts, meetings,
-streams. Speech recognition runs locally in your browser with Whisper; your audio
-never leaves your computer.
-```
+| Field | English | 中文 (zh-CN locale) |
+| --- | --- | --- |
+| Summary | `docs/amo/listing-summary.txt` | `docs/amo/listing-summary.zh-CN.txt` |
+| Description | `docs/amo/listing-description.txt` | `docs/amo/listing-description.zh-CN.txt` |
 
-**Description:**
+Keep them in step with the add-on: the first listing still said "whisper-tiny.en for the
+fastest captions" and "about 40 MB" long after Moonshine became the 27 MB default.
 
-```
-Local Live Captions puts a caption panel over whatever is playing in a tab, the way Chrome's Live
-Caption does — except the speech recognition runs on your own machine, inside Firefox,
-using a Whisper model compiled to WebAssembly.
-
-• Captions appear on their own as soon as a tab starts playing audio
-• Everything is local: after the one-time model download the add-on works offline,
-  and your audio is never uploaded
-• Works with ordinary <video>/<audio> players, with sites that play through the Web
-  Audio API, and with a microphone source for calls or anything Firefox cannot tap
-• Drag the panel anywhere, resize it, change the text size, pick dark or light
-• Choose your accuracy/speed trade-off: Moonshine for the fastest captions,
-  Whisper when you need another language; WebGPU if your build supports it
-• Can translate other languages into English with a multilingual model
-• Optionally point it at your own transcription server instead (OpenAI-compatible)
-
-Keyboard shortcut: Ctrl+Shift+L (Cmd+Shift+L on macOS) toggles captions for the tab.
-
-First run downloads the speech model (about 40 MB for the default). Firefox asks you
-to grant site access before the add-on can read a page's audio.
-
-Known limits: media served cross-origin without CORS headers cannot be tapped (use
-microphone mode there), DRM video cannot be captured at all, and captions lag by about
-the length of the phrase being spoken.
-```
-
-**Categories:** Accessibility (primary), Other / Photos-Music-Videos (secondary)
+**Categories:** Language Support and Photos, Music & Videos. AMO has no Accessibility
+category for extensions (the full list is at /api/v5/addons/categories/).
 **Tags:** captions, subtitles, accessibility, speech recognition, whisper, offline
 **Support site:** https://github.com/EricZhou866/LiveCaption
 **Support email:** EricZhou866@gmail.com
