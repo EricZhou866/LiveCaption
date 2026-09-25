@@ -198,14 +198,15 @@ since content scripts only inject on page load.
 
 Dates are as shown in the AMO Developer Hub, which uses UTC.
 
-### 1.4.3 — submitted to AMO on 2026-09-25, awaiting review
+### 1.4.3 — listed on AMO since 2026-09-25
 
-- New icon: a sound wave above the caption line it becomes. Shipped as PNG at every size
-  instead of one SVG — AMO's store page had not picked the SVG up and showed its default
-  puzzle piece — with a separately drawn, pixel-aligned 16 px version so the bars stay
-  distinct in the toolbar instead of blurring together.
-- The store page's own icon is set separately in the Developer Hub (Edit Product Page);
-  `docs/listing/icon-128.png` is the file for it.
+- New icon: a sound wave above the caption line it becomes, as PNG at every size, with a
+  separately drawn, pixel-aligned 16 px version so the bars stay distinct in the toolbar
+  instead of blurring together.
+- The store page does **not** take its icon from the manifest. AMO keeps a listing icon of
+  its own, set in the Developer Hub, and shows a default puzzle piece until one is
+  uploaded — the public API still reported `addon-icons/default-64.png` with 1.4.3 live.
+  `docs/listing/icon-128.png` is the file to upload there.
 
 ### 1.4.2 — listed on AMO since 2026-09-25
 

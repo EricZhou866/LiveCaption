@@ -130,8 +130,8 @@ First release.
   2. `screenshot-settings.png` —— 设置页；说明文字可写
      `Pick your model, panel style and timing`
 
-- **图标**：AMO 直接用 manifest 里的 `icons`（本插件是 SVG）。如果表单里出现单独的
-  图标上传项，用 `docs/listing/icon-128.png`。
+- **图标**：商店页面的图标**不会**从 manifest 里读取，必须在开发者后台单独上传
+  `docs/listing/icon-128.png`，否则一直显示 AMO 默认的拼图块。发新版本也不会改变它。
 
 ---
 

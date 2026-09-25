@@ -160,7 +160,7 @@ manifest. Mention the optional user-configured remote endpoint in the reviewer n
 
 | File | Use |
 | --- | --- |
-| `docs/listing/icon-128.png` | Listing icon |
+| `docs/listing/icon-128.png` | Listing icon — upload it in the Developer Hub; AMO does not take the listing icon from the manifest |
 | `docs/listing/screenshot-captions.png` | Screenshot 1 — the caption panel over a player |
 | `docs/listing/screenshot-settings.png` | Screenshot 2 — the Settings page, rendered from the real options page with the shipped defaults |
 
