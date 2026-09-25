@@ -13,7 +13,8 @@ LiveCaption.log = (...args) => {
 
 /**
  * Anti-aliased decimator: box-filters and resamples an arbitrary-rate mono
- * stream down to 16 kHz, carrying the fractional remainder between blocks.
+ * stream down to 16 kHz (or interpolates a slower one up), carrying the
+ * fractional remainder between blocks.
  */
 LiveCaption.Downsampler = class Downsampler {
   constructor(srcRate, dstRate = LiveCaption.SAMPLE_RATE) {
@@ -23,7 +24,7 @@ LiveCaption.Downsampler = class Downsampler {
   }
 
   process(input) {
-    if (this.ratio <= 1.0001) return Float32Array.from(input);
+    if (Math.abs(this.ratio - 1) <= 0.0001) return Float32Array.from(input);
 
     const buf = new Float32Array(this.tail.length + input.length);
     buf.set(this.tail, 0);
@@ -31,13 +32,24 @@ LiveCaption.Downsampler = class Downsampler {
 
     const out = [];
     let pos = this.pos;
-    while (pos + this.ratio <= buf.length) {
-      const start = Math.floor(pos);
-      const end = Math.floor(pos + this.ratio);
-      let sum = 0;
-      for (let i = start; i < end; i++) sum += buf[i];
-      out.push(sum / Math.max(1, end - start));
-      pos += this.ratio;
+    if (this.ratio < 1) {
+      // A page AudioContext can run below 16 kHz (8 kHz telephony audio):
+      // interpolate up, or the recogniser hears it at double speed.
+      while (pos + 1 < buf.length) {
+        const i = Math.floor(pos);
+        const f = pos - i;
+        out.push(buf[i] * (1 - f) + buf[i + 1] * f);
+        pos += this.ratio;
+      }
+    } else {
+      while (pos + this.ratio <= buf.length) {
+        const start = Math.floor(pos);
+        const end = Math.floor(pos + this.ratio);
+        let sum = 0;
+        for (let i = start; i < end; i++) sum += buf[i];
+        out.push(sum / Math.max(1, end - start));
+        pos += this.ratio;
+      }
     }
 
     const consumed = Math.floor(pos);

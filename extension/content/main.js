@@ -67,7 +67,10 @@
   /* ---------------- audio flow ---------------- */
 
   function enabled() {
-    return !!(state.settings && state.settings.enabled) && state.mode !== "off";
+    const s = state.settings;
+    if (!s || !s.enabled || state.mode === "off") return false;
+    // "auto" only listens by itself when auto-start is on; "on" always does.
+    return state.mode === "on" || s.autoStart !== false;
   }
 
   function onSamples(samples, level) {

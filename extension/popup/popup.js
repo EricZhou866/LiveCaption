@@ -22,7 +22,9 @@ async function refresh() {
 
   el("modeHint").textContent =
     state.mode === "auto"
-      ? "Auto shows captions whenever this tab plays audio."
+      ? state.settings.autoStart === false
+        ? "Automatic captions are off in Settings — choose On to caption this tab."
+        : "Auto shows captions whenever this tab plays audio."
       : state.mode === "on"
       ? "Captions stay on for this tab."
       : "Captions are off for this tab.";

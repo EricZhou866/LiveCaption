@@ -126,8 +126,9 @@ button[hidden] { display: none; } /* all:unset above would otherwise override [h
 
     initDrag() {
       const grip = this.box.querySelector(".grip");
-      let startX = 0, startY = 0, originLeft = 0, originTop = 0;
+      let startX = 0, startY = 0, originLeft = 0, originTop = 0, moved = false;
       const move = (e) => {
+        moved = true;
         const left = originLeft + (e.clientX - startX);
         const top = originTop + (e.clientY - startY);
         const maxLeft = window.innerWidth - this.box.offsetWidth;
@@ -138,13 +139,16 @@ button[hidden] { display: none; } /* all:unset above would otherwise override [h
         this.box.classList.remove("dragging");
         window.removeEventListener("pointermove", move, true);
         window.removeEventListener("pointerup", up, true);
-        this.onGeometry({ left: this.pos.left, top: this.pos.top });
+        // A plain click on the grip moves nothing, and before the first drag
+        // there is no position at all to save.
+        if (moved && this.pos) this.onGeometry({ left: this.pos.left, top: this.pos.top });
       };
       grip.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         const rect = this.box.getBoundingClientRect();
         startX = e.clientX; startY = e.clientY;
         originLeft = rect.left; originTop = rect.top;
+        moved = false;
         this.box.classList.add("dragging");
         window.addEventListener("pointermove", move, true);
         window.addEventListener("pointerup", up, true);

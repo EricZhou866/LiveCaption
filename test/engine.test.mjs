@@ -32,8 +32,8 @@ globalThis.Worker = FakeWorker;
 const sources = ["settings", "wav", "segmenter", "engine", "transcript", "background"]
   .map((f) => readFileSync(`extension/background/${f}.js`, "utf8"))
   .join("\n");
-eval(sources + "\nglobalThis.__e = { LocalEngine };");
-const { LocalEngine } = globalThis.__e;
+eval(sources + "\nglobalThis.__e = { LocalEngine, RemoteEngine, LCSettings, getSession, ensureSegmenter };");
+const { LocalEngine, RemoteEngine, LCSettings, getSession, ensureSegmenter } = globalThis.__e;
 
 let failures = 0;
 const check = (name, ok, detail) => {
@@ -125,6 +125,38 @@ const gpu = { ...cpu, device: "webgpu" };
   check("Moonshine gets no Whisper-only options", !("chunk_length_s" in moon) && !("language" in moon));
   const multi = decodeOptions("onnx-community/whisper-base", "de", "translate");
   check("multilingual Whisper gets language and task", multi.language === "de" && multi.task === "translate");
+}
+
+/* 6. a remote endpoint that never answers */
+{
+  const statuses = [];
+  const eng = new RemoteEngine((s) => statuses.push(s));
+  eng.timeoutMs = 150;
+  const realFetch = globalThis.fetch;
+  // A server that accepts the request and then says nothing, until aborted.
+  globalThis.fetch = (url, { signal } = {}) =>
+    new Promise((_, reject) => signal && signal.addEventListener("abort", () => reject(signal.reason)));
+  const remote = { remote: { url: "http://127.0.0.1:9/v1/audio/transcriptions" } };
+  const r = await within(2000, eng.transcribe(pcm(), remote, { force: true }));
+  check("a silent server is given up on instead of hanging", !r.hung && r.ok && r.v === null,
+        r.hung ? "still waiting after 2 s" : JSON.stringify(r));
+  check("...and the user is told", statuses.some((s) => /Transcription failed/.test(s.text || "")));
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ text: " next line " }) });
+  const next = await within(2000, eng.transcribe(pcm(), remote, { force: true }));
+  check("the next sentence still goes through", next.ok && next.v === "next line", JSON.stringify(next));
+  globalThis.fetch = realFetch;
+}
+
+/* 7. VAD settings reach a tab that is already captioning */
+{
+  const session = getSession(4242);
+  const before = await ensureSegmenter(session);
+  check("the segmenter starts on the stored pause length", before.vad.silenceMs === 600, String(before.vad.silenceMs));
+  await LCSettings.set({ ui: { fontSize: 24 } });
+  check("an appearance change leaves the segmenter alone", session.segmenter === before);
+  await LCSettings.set({ vad: { silenceMs: 900 } });
+  const after = await ensureSegmenter(session);
+  check("a new pause length takes effect without reloading the page", after.vad.silenceMs === 900, String(after.vad.silenceMs));
 }
 
 console.log(failures ? `\n${failures} FAILED` : "\nall engine checks passed");
