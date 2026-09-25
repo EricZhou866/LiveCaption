@@ -119,6 +119,12 @@ hard line breaks — AMO keeps newlines, so wrapped text shows up broken mid-sen
 Keep them in step with the add-on: the first listing still said "whisper-tiny.en for the
 fastest captions" and "about 40 MB" long after Moonshine became the 27 MB default.
 
+**Name, tags, donation link:** `docs/amo/listing-meta.json`. The name is capped at 50
+characters; tags come from AMO's fixed vocabulary (/api/v5/addons/tags/ — there is no
+"captions", "subtitles" or "accessibility"), at most 10; the donation link must be on one of
+AMO's supported services (GitHub Sponsors, Ko-fi, Buy Me a Coffee, PayPal, Liberapay,
+Open Collective, Patreon, Flattr, micropayment.de, donate.mozilla.org).
+
 **Categories:** Language Support and Photos, Music & Videos. AMO has no Accessibility
 category for extensions (the full list is at /api/v5/addons/categories/).
 **Tags:** captions, subtitles, accessibility, speech recognition, whisper, offline
