@@ -196,6 +196,13 @@ since content scripts only inject on page load.
 
 ## Release notes
 
+### 1.4.3
+
+- New icon: a sound wave above the caption line it becomes. Shipped as PNG at every size
+  instead of one SVG — AMO's store page had not picked the SVG up and showed its default
+  puzzle piece — with a separately drawn, pixel-aligned 16 px version so the bars stay
+  distinct in the toolbar instead of blurring together.
+
 ### 1.4.2 — submitted to AMO on 2026-09-24, awaiting review
 
 The first listed version to carry 1.4.0 and 1.4.1 below; 1.3.0 stays live until it is

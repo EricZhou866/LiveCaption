@@ -15,14 +15,7 @@ body {
 }
 header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 h1 { font-size: 14px; margin: 0; flex: 1; font-weight: 650; }
-.logo {
-  width: 20px; height: 14px; border-radius: 4px; border: 2px solid var(--accent);
-  position: relative; flex: none;
-}
-.logo::after {
-  content: ""; position: absolute; left: 3px; right: 3px; bottom: 2px;
-  height: 2px; border-radius: 1px; background: var(--accent);
-}
+.logo { width: 20px; height: 20px; flex: none; }
 .card { background: var(--card); border-radius: 10px; padding: 10px; margin-bottom: 8px; }
 .card.warn { background: var(--warn); }
 .card p { margin: 0 0 8px; }

@@ -185,6 +185,8 @@ npm run publish:amo
 
 3. **隐私政策改了的话**，还要到开发者后台手动更新商店页面的隐私政策栏（API 改不了它）。
 
+1.4.3（只换图标）：版本说明和审核员备注都在 `docs/amo/1.4.3.json` 里，`npm run publish:amo` 会一起提交。
+
 1.4.2 的版本说明（Release Notes）可以直接用：
 
 ```
